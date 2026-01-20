@@ -22,15 +22,25 @@ defmodule ZfsMeter.Component.VSI do
   # 150 degrees in radians
   @sweep_angle :math.pi() * 5 / 6
 
-  # OLED color palette (red to green spectrum)
-  @color_bg {0, 0, 0}
-  @color_dial {15, 10, 0}
-  @color_border {100, 70, 0}
-  @color_text {255, 180, 0}
-  @color_tick {180, 120, 0}
-  @color_needle {255, 140, 0}
-  @color_up {0, 255, 0}
-  @color_down {255, 0, 0}
+  # OLED color palette (yellow -> red spectrum + black)
+  @color_black {0, 0, 0}
+  @color_yellow {255, 220, 0}
+  @color_amber {255, 180, 0}
+  @color_orange {255, 140, 0}
+  @color_deep_orange {255, 100, 0}
+  @color_red_orange {255, 60, 0}
+  @color_warm_red {255, 30, 0}
+  @color_red {255, 0, 0}
+
+  # Semantic aliases
+  @color_bg @color_black
+  @color_dial @color_black
+  @color_border @color_deep_orange
+  @color_text @color_amber
+  @color_tick @color_warm_red
+  @color_needle @color_orange
+  @color_up @color_yellow
+  @color_down @color_red
 
   @impl Scenic.Component
   def validate(rate) when is_number(rate), do: {:ok, rate}
@@ -264,8 +274,8 @@ defmodule ZfsMeter.Component.VSI do
 
   defp draw_center_cap(graph) do
     graph
-    |> circle(35, fill: {40, 30, 0}, stroke: {5, @color_border})
-    |> circle(15, fill: {60, 45, 0})
+    |> circle(35, fill: @color_black, stroke: {5, @color_border})
+    |> circle(15, fill: @color_deep_orange)
   end
 
   # Convert value to angle

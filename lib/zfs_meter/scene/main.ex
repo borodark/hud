@@ -17,23 +17,23 @@ defmodule ZfsMeter.Scene.Main do
   # 20 fps
   @tick_interval 50
 
-  # OLED color palette (red to green spectrum)
-  # Pure black
-  @color_bg {0, 0, 0}
-  # Very dark amber
-  @color_frame {20, 15, 0}
-  # Dark amber border
-  @color_border {60, 45, 0}
-  # Amber text
-  @color_text {255, 180, 0}
-  # Orange titles
-  @color_title {255, 140, 0}
-  # Yellow status
-  @color_status {255, 220, 0}
-  # Pure green
-  @color_green {0, 255, 0}
-  # Yellow
-  @color_yellow {255, 255, 0}
+  # OLED color palette (yellow -> red spectrum + black)
+  @color_black {0, 0, 0}
+  @color_yellow {255, 220, 0}
+  @color_amber {255, 180, 0}
+  @color_orange {255, 140, 0}
+  @color_deep_orange {255, 100, 0}
+  @color_red_orange {255, 60, 0}
+  @color_warm_red {255, 30, 0}
+  @color_red {255, 0, 0}
+
+  # Semantic aliases
+  @color_bg @color_black
+  @color_frame @color_black
+  @color_border @color_warm_red
+  @color_text @color_amber
+  @color_title @color_orange
+  @color_status @color_yellow
 
   @impl Scenic.Scene
   def init(scene, _params, _opts) do
@@ -132,14 +132,14 @@ defmodule ZfsMeter.Scene.Main do
     )
     |> text("ALT: 0 ft",
       id: :altitude_text,
-      fill: @color_green,
+      fill: @color_orange,
       font_size: 36,
       text_align: :center,
       translate: {cx, y + 380}
     )
     |> text("VS: 0 ft/min",
       id: :vs_text,
-      fill: @color_yellow,
+      fill: @color_amber,
       font_size: 36,
       text_align: :center,
       translate: {cx, y + 440}

@@ -25,25 +25,23 @@ defmodule ZfsMeter.Component.DualTachometer do
   # Semicircle sweep (180 degrees)
   @sweep_angle :math.pi()
 
-  # OLED color palette (red to green spectrum)
-  # Pure black
-  @color_bg {0, 0, 0}
-  # Very dark amber
-  @color_dial {15, 10, 0}
-  # Amber border
-  @color_border {100, 70, 0}
-  # Amber text
-  @color_text {255, 180, 0}
-  # Orange needle
-  @color_needle {255, 140, 0}
-  # Darker amber ticks
-  @color_tick {180, 120, 0}
-  # Green arc
-  @color_green {0, 255, 0}
-  # Yellow arc
-  @color_yellow {255, 255, 0}
-  # Red arc
+  # OLED color palette (yellow -> red spectrum + black)
+  @color_black {0, 0, 0}
+  @color_yellow {255, 220, 0}
+  @color_amber {255, 180, 0}
+  @color_orange {255, 140, 0}
+  @color_deep_orange {255, 100, 0}
+  @color_red_orange {255, 60, 0}
+  @color_warm_red {255, 30, 0}
   @color_red {255, 0, 0}
+
+  # Semantic aliases
+  @color_bg @color_black
+  @color_dial @color_black
+  @color_border @color_deep_orange
+  @color_text @color_amber
+  @color_needle @color_orange
+  @color_tick @color_warm_red
 
   @impl Scenic.Component
   def validate({left_rpm, right_rpm, left_oil, right_oil})
@@ -200,8 +198,8 @@ defmodule ZfsMeter.Component.DualTachometer do
     arc_width = 22
 
     graph
-    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, @color_green, side)
-    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, @color_yellow, side)
+    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, @color_orange, side)
+    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, @color_deep_orange, side)
     |> draw_range_arc(arc_radius, arc_width, @yellow_max, @max_rpm, @color_red, side)
     |> draw_redline(side)
   end
@@ -397,8 +395,8 @@ defmodule ZfsMeter.Component.DualTachometer do
 
   defp draw_center_cap(graph) do
     graph
-    |> circle(28, fill: {40, 30, 0}, stroke: {4, @color_border})
-    |> circle(12, fill: {60, 45, 0})
+    |> circle(28, fill: @color_black, stroke: {4, @color_border})
+    |> circle(12, fill: @color_deep_orange)
   end
 
   # Convert RPM to angle
