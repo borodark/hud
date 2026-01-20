@@ -25,7 +25,9 @@ defmodule ZfsMeter.FlightSim do
     :altitude,
     :vertical_speed,
     :airspeed,
-    :ground_altitude
+    :ground_altitude,
+    :left_oil_temp,
+    :right_oil_temp
   ]
 
   @idle_rpm 800
@@ -39,6 +41,10 @@ defmodule ZfsMeter.FlightSim do
   @max_climb_rate 2000
   @cruise_altitude 12500
 
+  # Oil temperature ranges (°C)
+  @oil_temp_ambient 20
+  @oil_temp_max 110
+
   def new do
     %__MODULE__{
       phase: :ground_idle,
@@ -49,7 +55,9 @@ defmodule ZfsMeter.FlightSim do
       altitude: 0,
       vertical_speed: 0,
       airspeed: 0,
-      ground_altitude: 0
+      ground_altitude: 0,
+      left_oil_temp: @oil_temp_ambient,
+      right_oil_temp: @oil_temp_ambient
     }
   end
 
@@ -58,6 +66,7 @@ defmodule ZfsMeter.FlightSim do
     |> update_phase(dt_seconds)
     |> update_rpm(dt_seconds)
     |> update_flight_dynamics(dt_seconds)
+    |> update_oil_temps(dt_seconds)
   end
 
   defp update_phase(sim, dt) do
@@ -177,6 +186,28 @@ defmodule ZfsMeter.FlightSim do
     new_vs = approach_value(sim.vertical_speed, target_vs, vs_change_rate * dt)
 
     %{sim | vertical_speed: new_vs, altitude: altitude}
+  end
+
+  defp update_oil_temps(sim, dt) do
+    # Oil temp correlates with RPM - higher RPM = more heat
+    # Target temp based on RPM fraction
+    left_rpm_fraction = (sim.left_rpm - @idle_rpm) / (@takeoff_rpm - @idle_rpm)
+    right_rpm_fraction = (sim.right_rpm - @idle_rpm) / (@takeoff_rpm - @idle_rpm)
+
+    # Target temperature ranges from ambient (at idle) to max (at full power)
+    left_target = @oil_temp_ambient + left_rpm_fraction * (@oil_temp_max - @oil_temp_ambient)
+    right_target = @oil_temp_ambient + right_rpm_fraction * (@oil_temp_max - @oil_temp_ambient)
+
+    # Add slight random variation
+    left_target = left_target + (:rand.uniform() - 0.5) * 2
+    right_target = right_target + (:rand.uniform() - 0.5) * 2
+
+    # Oil temp changes slowly (thermal inertia)
+    temp_change_rate = 5  # °C per second
+    left_temp = approach_value(sim.left_oil_temp, left_target, temp_change_rate * dt)
+    right_temp = approach_value(sim.right_oil_temp, right_target, temp_change_rate * dt)
+
+    %{sim | left_oil_temp: left_temp, right_oil_temp: right_temp}
   end
 
   defp approach_value(current, target, max_change) do

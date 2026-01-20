@@ -76,7 +76,7 @@ defmodule ZfsMeter.Scene.Main do
     new_sim = FlightSim.tick(sim, dt)
 
     # Push updated values to components
-    :ok = put_child(scene, :engines_rpm, {new_sim.left_rpm, new_sim.right_rpm})
+    :ok = put_child(scene, :engines_rpm, {new_sim.left_rpm, new_sim.right_rpm, new_sim.left_oil_temp, new_sim.right_oil_temp})
     :ok = put_child(scene, :altimeter, new_sim.altitude)
     :ok = put_child(scene, :vsi, new_sim.vertical_speed)
 
@@ -153,7 +153,7 @@ defmodule ZfsMeter.Scene.Main do
 
     graph
     |> DualTachometer.add_to_graph(
-      {sim.left_rpm, sim.right_rpm},
+      {sim.left_rpm, sim.right_rpm, sim.left_oil_temp, sim.right_oil_temp},
       id: :engines_rpm,
       translate: {cx - 340, cy - 340},
       simulate: false

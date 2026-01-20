@@ -46,21 +46,22 @@ defmodule ZfsMeter.Component.DualTachometer do
   @color_red {255, 0, 0}
 
   @impl Scenic.Component
-  def validate({left_rpm, right_rpm}) when is_number(left_rpm) and is_number(right_rpm) do
-    {:ok, {left_rpm, right_rpm}}
+  def validate({left_rpm, right_rpm, left_oil, right_oil})
+      when is_number(left_rpm) and is_number(right_rpm) and is_number(left_oil) and is_number(right_oil) do
+    {:ok, {left_rpm, right_rpm, left_oil, right_oil}}
   end
 
-  def validate(_), do: {:error, "Expected {left_rpm, right_rpm}"}
+  def validate(_), do: {:error, "Expected {left_rpm, right_rpm, left_oil_temp, right_oil_temp}"}
 
   @impl Scenic.Scene
-  def init(scene, {left_rpm, right_rpm}, opts) do
+  def init(scene, {left_rpm, right_rpm, left_oil, right_oil}, opts) do
     simulate = Keyword.get(opts, :simulate, true)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(left_rpm, right_rpm)
+    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil)
 
     scene
     |> assign(
@@ -68,6 +69,8 @@ defmodule ZfsMeter.Component.DualTachometer do
       right_rpm: right_rpm,
       left_target: left_rpm,
       right_target: right_rpm,
+      left_oil: left_oil,
+      right_oil: right_oil,
       simulate: simulate
     )
     |> push_graph(graph)
@@ -76,11 +79,11 @@ defmodule ZfsMeter.Component.DualTachometer do
 
   # Handle external updates from parent scene
   @impl Scenic.Scene
-  def handle_put({left_rpm, right_rpm}, scene) do
-    graph = build_graph(left_rpm, right_rpm)
+  def handle_put({left_rpm, right_rpm, left_oil, right_oil}, scene) do
+    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil)
 
     scene
-    |> assign(left_rpm: left_rpm, right_rpm: right_rpm)
+    |> assign(left_rpm: left_rpm, right_rpm: right_rpm, left_oil: left_oil, right_oil: right_oil)
     |> push_graph(graph)
     |> then(&{:noreply, &1})
   end
@@ -117,7 +120,11 @@ defmodule ZfsMeter.Component.DualTachometer do
     left_rpm = left_current + (left_target - left_current) * 0.1
     right_rpm = right_current + (right_target - right_current) * 0.1
 
-    graph = build_graph(left_rpm, right_rpm)
+    # Simulate oil temps (correlate with RPM)
+    left_oil_sim = 50 + (left_rpm / @max_rpm) * 60
+    right_oil_sim = 50 + (right_rpm / @max_rpm) * 60
+
+    graph = build_graph(left_rpm, right_rpm, left_oil_sim, right_oil_sim)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -126,13 +133,15 @@ defmodule ZfsMeter.Component.DualTachometer do
       left_rpm: left_rpm,
       right_rpm: right_rpm,
       left_target: left_target,
-      right_target: right_target
+      right_target: right_target,
+      left_oil: left_oil_sim,
+      right_oil: right_oil_sim
     )
     |> push_graph(graph)
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(left_rpm, right_rpm) do
+  defp build_graph(left_rpm, right_rpm, left_oil, right_oil) do
     Graph.build()
     |> group(
       fn g ->
@@ -152,6 +161,9 @@ defmodule ZfsMeter.Component.DualTachometer do
         # Labels for both
         |> draw_labels(:left)
         |> draw_labels(:right)
+        # Oil temperature displays
+        |> draw_oil_temp(left_oil, :left)
+        |> draw_oil_temp(right_oil, :right)
         # Both needles
         |> draw_needle(left_rpm, :left)
         |> draw_needle(right_rpm, :right)
@@ -302,6 +314,62 @@ defmodule ZfsMeter.Component.DualTachometer do
       text_align: align,
       translate: {label_x, -@radius + 135}
     )
+  end
+
+  defp draw_oil_temp(graph, temp, side) do
+    # Position between center and numbers 15/20
+    x = case side do
+      :left -> -150
+      :right -> 150
+    end
+
+    # 7 bars configuration
+    bar_width = 28
+    bar_height = 10
+    bar_gap = 3
+    total_height = 7 * bar_height + 6 * bar_gap
+    start_y = total_height / 2 - bar_height / 2
+
+    # Temperature thresholds for each bar (bottom to top)
+    # Bars light up as temp increases
+    thresholds = [30, 50, 65, 80, 95, 105, 115]
+
+    # Bar colors: yellow, yellow, green, green, green, yellow, red
+    bar_colors = [
+      @color_yellow,  # Bar 1 - cold
+      @color_yellow,  # Bar 2 - cold
+      @color_green,   # Bar 3 - optimal
+      @color_green,   # Bar 4 - optimal
+      @color_green,   # Bar 5 - optimal
+      @color_yellow,  # Bar 6 - warm
+      @color_red      # Bar 7 - hot
+    ]
+
+    # Dim versions of colors for inactive bars
+    dim_factor = 0.2
+
+    Enum.reduce(0..6, graph, fn i, g ->
+      threshold = Enum.at(thresholds, i)
+      color = Enum.at(bar_colors, i)
+      y = start_y - i * (bar_height + bar_gap)
+
+      # Bar is active if temp >= threshold
+      active = temp >= threshold
+
+      fill = if active do
+        color
+      else
+        # Dim the color
+        {r, g_val, b} = color
+        {trunc(r * dim_factor), trunc(g_val * dim_factor), trunc(b * dim_factor)}
+      end
+
+      g
+      |> rrect({bar_width, bar_height, 2},
+        fill: fill,
+        translate: {x - bar_width / 2, y}
+      )
+    end)
   end
 
   defp draw_needle(graph, rpm, side) do
