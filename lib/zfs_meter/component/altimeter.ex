@@ -96,6 +96,7 @@ defmodule ZfsMeter.Component.Altimeter do
         |> draw_dial_face()
         |> draw_tick_marks()
         |> draw_numbers()
+        |> draw_readout(altitude)
         |> draw_needles(altitude)
         |> draw_center_cap()
       end,
@@ -169,6 +170,21 @@ defmodule ZfsMeter.Component.Altimeter do
         translate: {x, y + 20}
       )
     end)
+  end
+
+  # Numeric altitude readout in meters at 6 o'clock
+  defp draw_readout(graph, altitude) do
+    # Convert feet to meters
+    meters = trunc(altitude * 0.3048)
+    display = "#{meters} m"
+
+    graph
+    |> text(display,
+      fill: @color_text,
+      font_size: 36,
+      text_align: :center,
+      translate: {0, 180}
+    )
   end
 
   # Three needles for 100s, 1000s, 10000s

@@ -103,6 +103,7 @@ defmodule ZfsMeter.Component.VSI do
         |> draw_tick_marks()
         |> draw_numbers()
         |> draw_labels()
+        |> draw_readout(rate)
         |> draw_needle(rate)
         |> draw_center_cap()
       end,
@@ -208,6 +209,27 @@ defmodule ZfsMeter.Component.VSI do
       font_size: 36,
       text_align: :center,
       translate: {-100, 120}
+    )
+  end
+
+  defp draw_readout(graph, rate) do
+    # Format the rate value
+    value = trunc(rate)
+    display = if value >= 0, do: "+#{value}", else: "#{value}"
+
+    # Color based on direction
+    color = cond do
+      value > 50 -> @color_up
+      value < -50 -> @color_down
+      true -> @color_text
+    end
+
+    graph
+    |> text(display,
+      fill: color,
+      font_size: 42,
+      text_align: :center,
+      translate: {160, 12}
     )
   end
 
