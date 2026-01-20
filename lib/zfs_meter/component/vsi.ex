@@ -25,18 +25,37 @@ defmodule ZfsMeter.Component.VSI do
   def validate(_), do: {:error, "Expected vertical speed in ft/min"}
 
   @impl Scenic.Scene
-  def init(scene, rate, _opts) do
-    Process.send_after(self(), :tick, @update_interval)
+  def init(scene, rate, opts) do
+    simulate = Keyword.get(opts, :simulate, true)
+
+    if simulate do
+      Process.send_after(self(), :tick, @update_interval)
+    end
 
     graph = build_graph(rate)
 
     scene
-    |> assign(rate: rate, target: rate)
+    |> assign(rate: rate, target: rate, simulate: simulate)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
+  # Handle external updates from parent scene
+  @impl Scenic.Scene
+  def handle_put(rate, scene) when is_number(rate) do
+    graph = build_graph(rate)
+
+    scene
+    |> assign(rate: rate)
+    |> push_graph(graph)
+    |> then(&{:noreply, &1})
+  end
+
   @impl GenServer
+  def handle_info(:tick, %{assigns: %{simulate: false}} = scene) do
+    {:noreply, scene}
+  end
+
   def handle_info(:tick, scene) do
     %{rate: current, target: target} = scene.assigns
 

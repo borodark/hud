@@ -20,18 +20,37 @@ defmodule ZfsMeter.Component.Altimeter do
   def validate(_), do: {:error, "Expected altitude in feet"}
 
   @impl Scenic.Scene
-  def init(scene, altitude, _opts) do
-    Process.send_after(self(), :tick, @update_interval)
+  def init(scene, altitude, opts) do
+    simulate = Keyword.get(opts, :simulate, true)
+
+    if simulate do
+      Process.send_after(self(), :tick, @update_interval)
+    end
 
     graph = build_graph(altitude)
 
     scene
-    |> assign(altitude: altitude, target: altitude)
+    |> assign(altitude: altitude, target: altitude, simulate: simulate)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
+  # Handle external updates from parent scene
+  @impl Scenic.Scene
+  def handle_put(altitude, scene) when is_number(altitude) do
+    graph = build_graph(altitude)
+
+    scene
+    |> assign(altitude: altitude)
+    |> push_graph(graph)
+    |> then(&{:noreply, &1})
+  end
+
   @impl GenServer
+  def handle_info(:tick, %{assigns: %{simulate: false}} = scene) do
+    {:noreply, scene}
+  end
+
   def handle_info(:tick, scene) do
     # Simulate altitude changes for demo
     %{altitude: current, target: target} = scene.assigns
