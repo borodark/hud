@@ -25,6 +25,17 @@ defmodule ZfsMeter.Component.DualTachometer do
   # Semicircle sweep (180 degrees)
   @sweep_angle :math.pi()
 
+  # OLED color palette (red to green spectrum)
+  @color_bg {0, 0, 0}              # Pure black
+  @color_dial {15, 10, 0}          # Very dark amber
+  @color_border {100, 70, 0}       # Amber border
+  @color_text {255, 180, 0}        # Amber text
+  @color_needle {255, 140, 0}      # Orange needle
+  @color_tick {180, 120, 0}        # Darker amber ticks
+  @color_green {0, 255, 0}         # Green arc
+  @color_yellow {255, 255, 0}      # Yellow arc
+  @color_red {255, 0, 0}           # Red arc
+
   @impl Scenic.Component
   def validate({left_rpm, right_rpm}) when is_number(left_rpm) and is_number(right_rpm) do
     {:ok, {left_rpm, right_rpm}}
@@ -149,12 +160,12 @@ defmodule ZfsMeter.Component.DualTachometer do
 
     graph
     |> sector({@radius, sweep},
-      fill: {20, 20, 20},
-      stroke: {6, :white},
+      fill: @color_bg,
+      stroke: {6, @color_border},
       rotate: start
     )
     |> sector({@radius - 6, sweep},
-      fill: {30, 30, 35},
+      fill: @color_dial,
       rotate: start
     )
   end
@@ -164,9 +175,9 @@ defmodule ZfsMeter.Component.DualTachometer do
     arc_width = 22
 
     graph
-    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, {80, 200, 80}, side)
-    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, {220, 200, 50}, side)
-    |> draw_range_arc(arc_radius, arc_width, @yellow_max, @max_rpm, {220, 60, 60}, side)
+    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, @color_green, side)
+    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, @color_yellow, side)
+    |> draw_range_arc(arc_radius, arc_width, @yellow_max, @max_rpm, @color_red, side)
     |> draw_redline(side)
   end
 
@@ -195,7 +206,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     y2 = :math.sin(angle) * outer
 
     graph
-    |> line({{x1, y1}, {x2, y2}}, stroke: {5, {255, 0, 0}}, cap: :round)
+    |> line({{x1, y1}, {x2, y2}}, stroke: {5, @color_red}, cap: :round)
   end
 
   defp draw_tick_marks(graph, side) do
@@ -233,7 +244,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     x2 = :math.cos(angle) * outer
     y2 = :math.sin(angle) * outer
 
-    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, :white}, cap: :round)
+    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, @color_tick}, cap: :round)
   end
 
   defp draw_numbers(graph, side) do
@@ -249,7 +260,7 @@ defmodule ZfsMeter.Component.DualTachometer do
 
       g
       |> text("#{n}",
-        fill: :white,
+        fill: @color_text,
         font_size: 38,
         text_align: :center,
         translate: {x, y + 14}

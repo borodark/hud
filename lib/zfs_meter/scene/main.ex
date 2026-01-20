@@ -16,6 +16,16 @@ defmodule ZfsMeter.Scene.Main do
 
   @tick_interval 50  # 20 fps
 
+  # OLED color palette (red to green spectrum)
+  @color_bg {0, 0, 0}              # Pure black
+  @color_frame {20, 15, 0}         # Very dark amber
+  @color_border {60, 45, 0}        # Dark amber border
+  @color_text {255, 180, 0}        # Amber text
+  @color_title {255, 140, 0}       # Orange titles
+  @color_status {255, 220, 0}      # Yellow status
+  @color_green {0, 255, 0}         # Pure green
+  @color_yellow {255, 255, 0}      # Yellow
+
   @impl Scenic.Scene
   def init(scene, _params, _opts) do
     # Initialize flight simulation
@@ -23,7 +33,7 @@ defmodule ZfsMeter.Scene.Main do
 
     graph =
       Graph.build(font: :roboto, font_size: 24)
-      |> rect({2388, 1668}, fill: {25, 25, 30})
+      |> rect({2388, 1668}, fill: @color_bg)
       # Row 1
       |> draw_widget_frame(0, 0, "Engine RPM")
       |> draw_widget_frame(1, 0, "Altimeter")
@@ -86,12 +96,12 @@ defmodule ZfsMeter.Scene.Main do
 
     graph
     |> rrect({@col_width - padding * 2, @row_height - padding * 2, 12},
-      fill: {35, 35, 40},
-      stroke: {2, {60, 60, 70}},
+      fill: @color_frame,
+      stroke: {2, @color_border},
       translate: {x + padding, y + padding}
     )
     |> text(title,
-      fill: {:white, 200},
+      fill: @color_title,
       font_size: 28,
       translate: {x + 40, y + 55}
     )
@@ -105,21 +115,21 @@ defmodule ZfsMeter.Scene.Main do
     graph
     |> text("GROUND IDLE",
       id: :phase_text,
-      fill: {:cyan, 255},
+      fill: @color_status,
       font_size: 48,
       text_align: :center,
       translate: {cx, y + 300}
     )
     |> text("ALT: 0 ft",
       id: :altitude_text,
-      fill: {:green, 220},
+      fill: @color_green,
       font_size: 36,
       text_align: :center,
       translate: {cx, y + 380}
     )
     |> text("VS: 0 ft/min",
       id: :vs_text,
-      fill: {:yellow, 220},
+      fill: @color_yellow,
       font_size: 36,
       text_align: :center,
       translate: {cx, y + 440}
@@ -138,8 +148,8 @@ defmodule ZfsMeter.Scene.Main do
       translate: {cx - 340, cy - 340},
       simulate: false
     )
-    |> text("ENG 1", fill: :white, font_size: 32, text_align: :center, translate: {cx - 200, cy + 360})
-    |> text("ENG 2", fill: :white, font_size: 32, text_align: :center, translate: {cx + 200, cy + 360})
+    |> text("ENG 1", fill: @color_text, font_size: 32, text_align: :center, translate: {cx - 200, cy + 360})
+    |> text("ENG 2", fill: @color_text, font_size: 32, text_align: :center, translate: {cx + 200, cy + 360})
   end
 
   defp add_altimeter(graph, col, row, sim) do
