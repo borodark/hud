@@ -193,7 +193,7 @@ defmodule ZfsMeter.Component.Altimeter do
   end
 
   defp draw_long_needle(graph, angle) do
-    rotation = angle - :math.pi() / 2
+    rotation = angle
     length = @radius - 50
 
     graph
@@ -207,7 +207,7 @@ defmodule ZfsMeter.Component.Altimeter do
   end
 
   defp draw_medium_needle(graph, angle) do
-    rotation = angle - :math.pi() / 2
+    rotation = angle
     length = @radius - 120
 
     graph
@@ -221,7 +221,7 @@ defmodule ZfsMeter.Component.Altimeter do
   end
 
   defp draw_short_needle(graph, angle) do
-    rotation = angle - :math.pi() / 2
+    rotation = angle
     length = @radius - 180
 
     graph
