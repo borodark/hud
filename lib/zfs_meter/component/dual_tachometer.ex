@@ -334,15 +334,15 @@ defmodule ZfsMeter.Component.DualTachometer do
     # Bars light up as temp increases
     thresholds = [30, 50, 65, 80, 95, 105, 115]
 
-    # Bar colors: yellow, yellow, green, green, green, yellow, red
+    # Bar colors: yellow -> orange -> red gradient
     bar_colors = [
-      @color_yellow,  # Bar 1 - cold
-      @color_yellow,  # Bar 2 - cold
-      @color_green,   # Bar 3 - optimal
-      @color_green,   # Bar 4 - optimal
-      @color_green,   # Bar 5 - optimal
-      @color_yellow,  # Bar 6 - warm
-      @color_red      # Bar 7 - hot
+      {255, 220, 0},   # Bar 1 - yellow (cold)
+      {255, 180, 0},   # Bar 2 - amber
+      {255, 140, 0},   # Bar 3 - orange (optimal)
+      {255, 100, 0},   # Bar 4 - deep orange (optimal)
+      {255, 60, 0},    # Bar 5 - red-orange
+      {255, 30, 0},    # Bar 6 - warm red
+      {255, 0, 0}      # Bar 7 - red (hot)
     ]
 
     # Dim versions of colors for inactive bars
