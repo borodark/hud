@@ -14,17 +14,26 @@ defmodule ZfsMeter.Scene.Main do
   @col_width 796
   @row_height 834
 
-  @tick_interval 50  # 20 fps
+  # 20 fps
+  @tick_interval 50
 
   # OLED color palette (red to green spectrum)
-  @color_bg {0, 0, 0}              # Pure black
-  @color_frame {20, 15, 0}         # Very dark amber
-  @color_border {60, 45, 0}        # Dark amber border
-  @color_text {255, 180, 0}        # Amber text
-  @color_title {255, 140, 0}       # Orange titles
-  @color_status {255, 220, 0}      # Yellow status
-  @color_green {0, 255, 0}         # Pure green
-  @color_yellow {255, 255, 0}      # Yellow
+  # Pure black
+  @color_bg {0, 0, 0}
+  # Very dark amber
+  @color_frame {20, 15, 0}
+  # Dark amber border
+  @color_border {60, 45, 0}
+  # Amber text
+  @color_text {255, 180, 0}
+  # Orange titles
+  @color_title {255, 140, 0}
+  # Yellow status
+  @color_status {255, 220, 0}
+  # Pure green
+  @color_green {0, 255, 0}
+  # Yellow
+  @color_yellow {255, 255, 0}
 
   @impl Scenic.Scene
   def init(scene, _params, _opts) do
@@ -72,10 +81,11 @@ defmodule ZfsMeter.Scene.Main do
     :ok = put_child(scene, :vsi, new_sim.vertical_speed)
 
     # Update flight status display
-    graph = scene.assigns.graph
-    |> Graph.modify(:phase_text, &text(&1, format_phase(new_sim.phase)))
-    |> Graph.modify(:altitude_text, &text(&1, "ALT: #{trunc(new_sim.altitude)} ft"))
-    |> Graph.modify(:vs_text, &text(&1, "VS: #{trunc(new_sim.vertical_speed)} ft/min"))
+    graph =
+      scene.assigns.graph
+      |> Graph.modify(:phase_text, &text(&1, format_phase(new_sim.phase)))
+      |> Graph.modify(:altitude_text, &text(&1, "ALT: #{trunc(new_sim.altitude)} ft"))
+      |> Graph.modify(:vs_text, &text(&1, "VS: #{trunc(new_sim.vertical_speed)} ft/min"))
 
     # Schedule next tick
     Process.send_after(self(), :tick, @tick_interval)
@@ -148,8 +158,18 @@ defmodule ZfsMeter.Scene.Main do
       translate: {cx - 340, cy - 340},
       simulate: false
     )
-    |> text("ENG 1", fill: @color_text, font_size: 32, text_align: :center, translate: {cx - 200, cy + 360})
-    |> text("ENG 2", fill: @color_text, font_size: 32, text_align: :center, translate: {cx + 200, cy + 360})
+    |> text("ENG 1",
+      fill: @color_text,
+      font_size: 32,
+      text_align: :center,
+      translate: {cx - 200, cy + 360}
+    )
+    |> text("ENG 2",
+      fill: @color_text,
+      font_size: 32,
+      text_align: :center,
+      translate: {cx + 200, cy + 360}
+    )
   end
 
   defp add_altimeter(graph, col, row, sim) do

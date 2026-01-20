@@ -26,20 +26,30 @@ defmodule ZfsMeter.Component.DualTachometer do
   @sweep_angle :math.pi()
 
   # OLED color palette (red to green spectrum)
-  @color_bg {0, 0, 0}              # Pure black
-  @color_dial {15, 10, 0}          # Very dark amber
-  @color_border {100, 70, 0}       # Amber border
-  @color_text {255, 180, 0}        # Amber text
-  @color_needle {255, 140, 0}      # Orange needle
-  @color_tick {180, 120, 0}        # Darker amber ticks
-  @color_green {0, 255, 0}         # Green arc
-  @color_yellow {255, 255, 0}      # Yellow arc
-  @color_red {255, 0, 0}           # Red arc
+  # Pure black
+  @color_bg {0, 0, 0}
+  # Very dark amber
+  @color_dial {15, 10, 0}
+  # Amber border
+  @color_border {100, 70, 0}
+  # Amber text
+  @color_text {255, 180, 0}
+  # Orange needle
+  @color_needle {255, 140, 0}
+  # Darker amber ticks
+  @color_tick {180, 120, 0}
+  # Green arc
+  @color_green {0, 255, 0}
+  # Yellow arc
+  @color_yellow {255, 255, 0}
+  # Red arc
+  @color_red {255, 0, 0}
 
   @impl Scenic.Component
   def validate({left_rpm, right_rpm}) when is_number(left_rpm) and is_number(right_rpm) do
     {:ok, {left_rpm, right_rpm}}
   end
+
   def validate(_), do: {:error, "Expected {left_rpm, right_rpm}"}
 
   @impl Scenic.Scene
@@ -153,10 +163,13 @@ defmodule ZfsMeter.Component.DualTachometer do
   end
 
   defp draw_dial_face(graph, side) do
-    {start, sweep} = case side do
-      :left -> {:math.pi() / 2, @sweep_angle}    # Bottom to top, curving left
-      :right -> {-:math.pi() / 2, @sweep_angle}  # Top to bottom, curving right
-    end
+    {start, sweep} =
+      case side do
+        # Bottom to top, curving left
+        :left -> {:math.pi() / 2, @sweep_angle}
+        # Top to bottom, curving right
+        :right -> {-:math.pi() / 2, @sweep_angle}
+      end
 
     graph
     |> sector({@radius, sweep},
@@ -226,6 +239,7 @@ defmodule ZfsMeter.Component.DualTachometer do
   defp draw_minor_ticks(graph, side) do
     Enum.reduce(0..35, graph, fn i, g ->
       rpm = i * 100
+
       if rem(i, 5) == 0 do
         g
       else
@@ -269,20 +283,21 @@ defmodule ZfsMeter.Component.DualTachometer do
   end
 
   defp draw_labels(graph, side) do
-    {label_x, align} = case side do
-      :left -> {-@radius + 80, :left}
-      :right -> {@radius - 80, :right}
-    end
+    {label_x, align} =
+      case side do
+        :left -> {-@radius + 80, :left}
+        :right -> {@radius - 80, :right}
+      end
 
     graph
     |> text("RPM",
-      fill: {:white, 220},
+      fill: @color_text,
       font_size: 32,
       text_align: align,
       translate: {label_x, -@radius + 100}
     )
     |> text("×100",
-      fill: {:white, 180},
+      fill: @color_tick,
       font_size: 24,
       text_align: align,
       translate: {label_x, -@radius + 135}
@@ -296,25 +311,26 @@ defmodule ZfsMeter.Component.DualTachometer do
     tail_length = 40
 
     graph
-    |> group(
-      fn g ->
-        g
-        |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
-          stroke: {6, :white},
-          cap: :round
-        )
-        |> line({{0, 0}, {:math.cos(angle + :math.pi()) * tail_length, :math.sin(angle + :math.pi()) * tail_length}},
-          stroke: {6, :white},
-          cap: :round
-        )
-      end
-    )
+    |> group(fn g ->
+      g
+      |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
+        stroke: {6, @color_needle},
+        cap: :round
+      )
+      |> line(
+        {{0, 0},
+         {:math.cos(angle + :math.pi()) * tail_length,
+          :math.sin(angle + :math.pi()) * tail_length}},
+        stroke: {6, @color_needle},
+        cap: :round
+      )
+    end)
   end
 
   defp draw_center_cap(graph) do
     graph
-    |> circle(28, fill: {50, 50, 55}, stroke: {4, {:white, 128}})
-    |> circle(12, fill: {80, 80, 85})
+    |> circle(28, fill: {40, 30, 0}, stroke: {4, @color_border})
+    |> circle(12, fill: {60, 45, 0})
   end
 
   # Convert RPM to angle
@@ -327,6 +343,7 @@ defmodule ZfsMeter.Component.DualTachometer do
       :left ->
         # Bottom (π/2) to top (3π/2), going through left side (π)
         :math.pi() / 2 + fraction * @sweep_angle
+
       :right ->
         # Bottom (π/2) to top (-π/2), going through right side (0)
         :math.pi() / 2 - fraction * @sweep_angle

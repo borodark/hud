@@ -35,7 +35,8 @@ defmodule ZfsMeter.FlightSim do
   @descent_rpm 1800
   @approach_rpm 1500
 
-  @max_climb_rate 2000  # ft/min at full power
+  # ft/min at full power
+  @max_climb_rate 2000
   @cruise_altitude 12500
 
   def new do
@@ -100,7 +101,8 @@ defmodule ZfsMeter.FlightSim do
 
   defp update_rpm(sim, dt) do
     # RPM changes gradually (engine spool up/down)
-    rpm_change_rate = 400  # RPM per second
+    # RPM per second
+    rpm_change_rate = 400
 
     left_rpm = approach_value(sim.left_rpm, sim.target_rpm, rpm_change_rate * dt)
     # Right engine slightly different for realism
@@ -117,58 +119,61 @@ defmodule ZfsMeter.FlightSim do
     thrust_fraction = max(0, min(1, thrust_fraction))
 
     # Different physics based on phase
-    {target_vs, altitude} = case sim.phase do
-      :ground_idle ->
-        {0, 0}
-
-      :takeoff_roll ->
-        # Still on ground, building speed
-        {0, 0}
-
-      :rotation ->
-        # Initial climb, aggressive
-        target = thrust_fraction * @max_climb_rate * 0.9
-        {target, sim.altitude + sim.vertical_speed * dt / 60}
-
-      :initial_climb ->
-        target = thrust_fraction * @max_climb_rate * 0.85
-        {target, sim.altitude + sim.vertical_speed * dt / 60}
-
-      :cruise_climb ->
-        target = thrust_fraction * @max_climb_rate * 0.5
-        {target, sim.altitude + sim.vertical_speed * dt / 60}
-
-      :level_off ->
-        # Smoothly reduce climb rate to zero
-        target = max(0, sim.vertical_speed - 200 * dt)
-        {target, sim.altitude + sim.vertical_speed * dt / 60}
-
-      :cruise ->
-        # Maintain altitude
-        {0, sim.altitude}
-
-      :descent ->
-        # Descending
-        target = -800 - thrust_fraction * 200
-        {target, max(0, sim.altitude + sim.vertical_speed * dt / 60)}
-
-      :approach ->
-        # Steeper descent for approach
-        target = -600
-        {target, max(0, sim.altitude + sim.vertical_speed * dt / 60)}
-
-      :landing ->
-        target = -400
-        new_alt = max(0, sim.altitude + sim.vertical_speed * dt / 60)
-        if new_alt <= 0 do
+    {target_vs, altitude} =
+      case sim.phase do
+        :ground_idle ->
           {0, 0}
-        else
-          {target, new_alt}
-        end
-    end
+
+        :takeoff_roll ->
+          # Still on ground, building speed
+          {0, 0}
+
+        :rotation ->
+          # Initial climb, aggressive
+          target = thrust_fraction * @max_climb_rate * 0.9
+          {target, sim.altitude + sim.vertical_speed * dt / 60}
+
+        :initial_climb ->
+          target = thrust_fraction * @max_climb_rate * 0.85
+          {target, sim.altitude + sim.vertical_speed * dt / 60}
+
+        :cruise_climb ->
+          target = thrust_fraction * @max_climb_rate * 0.5
+          {target, sim.altitude + sim.vertical_speed * dt / 60}
+
+        :level_off ->
+          # Smoothly reduce climb rate to zero
+          target = max(0, sim.vertical_speed - 200 * dt)
+          {target, sim.altitude + sim.vertical_speed * dt / 60}
+
+        :cruise ->
+          # Maintain altitude
+          {0, sim.altitude}
+
+        :descent ->
+          # Descending
+          target = -800 - thrust_fraction * 200
+          {target, max(0, sim.altitude + sim.vertical_speed * dt / 60)}
+
+        :approach ->
+          # Steeper descent for approach
+          target = -600
+          {target, max(0, sim.altitude + sim.vertical_speed * dt / 60)}
+
+        :landing ->
+          target = -400
+          new_alt = max(0, sim.altitude + sim.vertical_speed * dt / 60)
+
+          if new_alt <= 0 do
+            {0, 0}
+          else
+            {target, new_alt}
+          end
+      end
 
     # Vertical speed changes gradually
-    vs_change_rate = 300  # ft/min per second
+    # ft/min per second
+    vs_change_rate = 300
     new_vs = approach_value(sim.vertical_speed, target_vs, vs_change_rate * dt)
 
     %{sim | vertical_speed: new_vs, altitude: altitude}

@@ -16,9 +16,21 @@ defmodule ZfsMeter.Component.VSI do
   @update_interval 50
 
   # Scale configuration
-  @max_rate 2000  # ft/min
+  # ft/min
+  @max_rate 2000
   # The needle sweeps 150 degrees each direction from zero (at 9 o'clock)
-  @sweep_angle :math.pi() * 5 / 6  # 150 degrees in radians
+  # 150 degrees in radians
+  @sweep_angle :math.pi() * 5 / 6
+
+  # OLED color palette (red to green spectrum)
+  @color_bg {0, 0, 0}
+  @color_dial {15, 10, 0}
+  @color_border {100, 70, 0}
+  @color_text {255, 180, 0}
+  @color_tick {180, 120, 0}
+  @color_needle {255, 140, 0}
+  @color_up {0, 255, 0}
+  @color_down {255, 0, 0}
 
   @impl Scenic.Component
   def validate(rate) when is_number(rate), do: {:ok, rate}
@@ -100,8 +112,8 @@ defmodule ZfsMeter.Component.VSI do
 
   defp draw_dial_face(graph) do
     graph
-    |> circle(@radius, fill: {20, 20, 20}, stroke: {8, :white})
-    |> circle(@radius - 8, fill: {30, 30, 35})
+    |> circle(@radius, fill: @color_bg, stroke: {8, @color_border})
+    |> circle(@radius - 8, fill: @color_dial)
   end
 
   defp draw_tick_marks(graph) do
@@ -149,7 +161,7 @@ defmodule ZfsMeter.Component.VSI do
     x2 = :math.cos(angle) * outer
     y2 = :math.sin(angle) * outer
 
-    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, :white}, cap: :round)
+    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, @color_tick}, cap: :round)
   end
 
   defp draw_numbers(graph) do
@@ -176,7 +188,7 @@ defmodule ZfsMeter.Component.VSI do
 
     graph
     |> text(label,
-      fill: :white,
+      fill: @color_text,
       font_size: 48,
       text_align: :center,
       translate: {x, y + 16}
@@ -186,28 +198,16 @@ defmodule ZfsMeter.Component.VSI do
   defp draw_labels(graph) do
     graph
     |> text("UP",
-      fill: {:green, 200},
+      fill: @color_up,
       font_size: 36,
       text_align: :center,
-      translate: {120, -50}
+      translate: {-100, -120}
     )
     |> text("DN",
-      fill: {:red, 200},
+      fill: @color_down,
       font_size: 36,
       text_align: :center,
-      translate: {-120, -50}
-    )
-    |> text("VERTICAL",
-      fill: {:white, 180},
-      font_size: 32,
-      text_align: :center,
-      translate: {0, 80}
-    )
-    |> text("SPEED",
-      fill: {:white, 180},
-      font_size: 32,
-      text_align: :center,
-      translate: {0, 115}
+      translate: {-100, 120}
     )
   end
 
@@ -223,41 +223,41 @@ defmodule ZfsMeter.Component.VSI do
 
     # Needle rotation (angle is already in standard position)
     graph
-    |> group(
-      fn g ->
-        g
-        |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
-          stroke: {8, :white},
-          cap: :round
-        )
-        # Small tail in opposite direction
-        |> line({{0, 0}, {:math.cos(angle + :math.pi()) * tail_length, :math.sin(angle + :math.pi()) * tail_length}},
-          stroke: {8, :white},
-          cap: :round
-        )
-      end
-    )
+    |> group(fn g ->
+      g
+      |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
+        stroke: {8, @color_needle},
+        cap: :round
+      )
+      # Small tail in opposite direction
+      |> line(
+        {{0, 0},
+         {:math.cos(angle + :math.pi()) * tail_length,
+          :math.sin(angle + :math.pi()) * tail_length}},
+        stroke: {8, @color_needle},
+        cap: :round
+      )
+    end)
   end
 
   defp draw_center_cap(graph) do
     graph
-    |> circle(35, fill: {50, 50, 55}, stroke: {5, {:white, 128}})
-    |> circle(15, fill: {80, 80, 85})
+    |> circle(35, fill: {40, 30, 0}, stroke: {5, @color_border})
+    |> circle(15, fill: {60, 45, 0})
   end
 
   # Convert value to angle
   # Zero is at 9 o'clock (pointing left, angle = π)
-  # Up (climb) goes clockwise from there
-  # Down (descent) goes counter-clockwise from there
+  # In screen coords (Y down): UP goes toward 12 o'clock (3π/2), DN toward 6 o'clock (π/2)
   defp value_to_angle(value, :up) do
-    # 0 -> π (9 o'clock), 2000 -> π - sweep_angle (pointing up-right)
+    # 0 -> π (9 o'clock), 2000 -> π + sweep_angle (toward 12 o'clock)
     fraction = value / @max_rate
-    :math.pi() - fraction * @sweep_angle
+    :math.pi() + fraction * @sweep_angle
   end
 
   defp value_to_angle(value, :down) do
-    # 0 -> π (9 o'clock), 2000 -> π + sweep_angle (pointing down-left)
+    # 0 -> π (9 o'clock), 2000 -> π - sweep_angle (toward 6 o'clock)
     fraction = value / @max_rate
-    :math.pi() + fraction * @sweep_angle
+    :math.pi() - fraction * @sweep_angle
   end
 end

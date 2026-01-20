@@ -11,15 +11,21 @@ defmodule ZfsMeter.Component.DiskGauge do
 
   @radius 160
   @max_angle :math.pi()
-  @max_rate 500.0  # Maximum MB/s for full scale
-  @update_interval 500  # ms
+  # Maximum MB/s for full scale
+  @max_rate 500.0
+  # ms
+  @update_interval 500
   @stroke_width 32
 
   # Colors for different activity levels
-  @color_low {80, 200, 120}      # Green
-  @color_medium {255, 200, 50}   # Yellow
-  @color_high {255, 80, 80}      # Red
-  @color_bg {60, 60, 70}         # Dark gray background
+  # Green
+  @color_low {80, 200, 120}
+  # Yellow
+  @color_medium {255, 200, 50}
+  # Red
+  @color_high {255, 80, 80}
+  # Dark gray background
+  @color_bg {60, 60, 70}
 
   @impl Scenic.Component
   def validate(rate) when is_number(rate) and rate >= 0, do: {:ok, rate}

@@ -10,6 +10,6 @@ config :zfs_meter, :viewport,
     [
       module: Scenic.Driver.Local,
       name: :local,
-      window: [title: "ZFS Meter", resizeable: false]
+      window: [title: "ALIC II", resizeable: false]
     ]
   ]

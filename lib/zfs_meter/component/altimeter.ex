@@ -15,6 +15,17 @@ defmodule ZfsMeter.Component.Altimeter do
   @radius 340
   @update_interval 50
 
+  # OLED color palette (red to green spectrum)
+  @color_bg {0, 0, 0}
+  @color_dial {15, 10, 0}
+  @color_border {100, 70, 0}
+  @color_text {255, 180, 0}
+  @color_tick {180, 120, 0}
+  @color_tick_minor {120, 80, 0}
+  @color_needle_long {255, 180, 0}
+  @color_needle_medium {255, 140, 0}
+  @color_needle_short {255, 80, 0}
+
   @impl Scenic.Component
   def validate(altitude) when is_number(altitude), do: {:ok, altitude}
   def validate(_), do: {:error, "Expected altitude in feet"}
@@ -92,11 +103,11 @@ defmodule ZfsMeter.Component.Altimeter do
     )
   end
 
-  # Black dial face with white border
+  # Black dial face with amber border
   defp draw_dial_face(graph) do
     graph
-    |> circle(@radius, fill: {20, 20, 20}, stroke: {8, :white})
-    |> circle(@radius - 8, fill: {30, 30, 35})
+    |> circle(@radius, fill: @color_bg, stroke: {8, @color_border})
+    |> circle(@radius - 8, fill: @color_dial)
   end
 
   # Major ticks (at each number) and minor ticks
@@ -117,7 +128,7 @@ defmodule ZfsMeter.Component.Altimeter do
       x2 = :math.cos(angle) * outer
       y2 = :math.sin(angle) * outer
 
-      g |> line({{x1, y1}, {x2, y2}}, stroke: {8, :white}, cap: :round)
+      g |> line({{x1, y1}, {x2, y2}}, stroke: {8, @color_tick}, cap: :round)
     end)
   end
 
@@ -136,7 +147,7 @@ defmodule ZfsMeter.Component.Altimeter do
         x2 = :math.cos(angle) * outer
         y2 = :math.sin(angle) * outer
 
-        g |> line({{x1, y1}, {x2, y2}}, stroke: {3, {:white, 180}})
+        g |> line({{x1, y1}, {x2, y2}}, stroke: {3, @color_tick_minor})
       end
     end)
   end
@@ -152,7 +163,7 @@ defmodule ZfsMeter.Component.Altimeter do
       g
       |> text(
         "#{i}",
-        fill: :white,
+        fill: @color_text,
         font_size: 56,
         text_align: :center,
         translate: {x, y + 20}
@@ -189,7 +200,7 @@ defmodule ZfsMeter.Component.Altimeter do
     |> group(
       fn g ->
         g
-        |> line({{0, 25}, {0, -length}}, stroke: {6, :white}, cap: :round)
+        |> line({{0, 25}, {0, -length}}, stroke: {6, @color_needle_long}, cap: :round)
       end,
       rotate: rotation
     )
@@ -203,7 +214,7 @@ defmodule ZfsMeter.Component.Altimeter do
     |> group(
       fn g ->
         g
-        |> line({{0, 40}, {0, -length}}, stroke: {12, :white}, cap: :round)
+        |> line({{0, 40}, {0, -length}}, stroke: {12, @color_needle_medium}, cap: :round)
       end,
       rotate: rotation
     )
@@ -218,8 +229,10 @@ defmodule ZfsMeter.Component.Altimeter do
       fn g ->
         g
         # Triangle pointer
-        |> triangle({{0, -length}, {-18, -length + 60}, {18, -length + 60}}, fill: :orange)
-        |> line({{0, 50}, {0, -length + 50}}, stroke: {18, :orange}, cap: :round)
+        |> triangle({{0, -length}, {-18, -length + 60}, {18, -length + 60}},
+          fill: @color_needle_short
+        )
+        |> line({{0, 50}, {0, -length + 50}}, stroke: {18, @color_needle_short}, cap: :round)
       end,
       rotate: rotation
     )
@@ -228,7 +241,7 @@ defmodule ZfsMeter.Component.Altimeter do
   # Center cap covering needle pivots
   defp draw_center_cap(graph) do
     graph
-    |> circle(35, fill: {50, 50, 55}, stroke: {5, {:white, 128}})
-    |> circle(15, fill: {80, 80, 85})
+    |> circle(35, fill: {40, 30, 0}, stroke: {5, @color_border})
+    |> circle(15, fill: {60, 45, 0})
   end
 end

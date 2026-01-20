@@ -28,7 +28,9 @@ defmodule ZfsMeter.Component.Tachometer do
   @sweep_angle :math.pi()
 
   @impl Scenic.Component
-  def validate({rpm, side}) when is_number(rpm) and side in [:left, :right], do: {:ok, {rpm, side}}
+  def validate({rpm, side}) when is_number(rpm) and side in [:left, :right],
+    do: {:ok, {rpm, side}}
+
   def validate(rpm) when is_number(rpm), do: {:ok, {rpm, :left}}
   def validate(_), do: {:error, "Expected {rpm, :left | :right} or just rpm"}
 
@@ -89,10 +91,13 @@ defmodule ZfsMeter.Component.Tachometer do
   defp draw_dial_face(graph, side) do
     # Left "(": sector from π/2 to -π/2 (right half, curving left)
     # Right ")": sector from π/2 to 3π/2 (left half, curving right)
-    {start, sweep} = case side do
-      :left -> {-:math.pi() / 2, @sweep_angle}   # Top to bottom, curving left
-      :right -> {:math.pi() / 2, @sweep_angle}   # Bottom to top, curving right
-    end
+    {start, sweep} =
+      case side do
+        # Top to bottom, curving left
+        :left -> {-:math.pi() / 2, @sweep_angle}
+        # Bottom to top, curving right
+        :right -> {:math.pi() / 2, @sweep_angle}
+      end
 
     graph
     |> sector({@radius, sweep},
@@ -122,10 +127,13 @@ defmodule ZfsMeter.Component.Tachometer do
     end_angle = rpm_to_angle(rpm_end, side)
 
     # Calculate sweep - direction depends on side
-    sweep = case side do
-      :left -> start_angle - end_angle   # Counter-clockwise (negative)
-      :right -> end_angle - start_angle  # Clockwise (positive)
-    end
+    sweep =
+      case side do
+        # Counter-clockwise (negative)
+        :left -> start_angle - end_angle
+        # Clockwise (positive)
+        :right -> end_angle - start_angle
+      end
 
     graph
     |> arc({arc_radius, sweep},
@@ -166,6 +174,7 @@ defmodule ZfsMeter.Component.Tachometer do
   defp draw_minor_ticks(graph, side) do
     Enum.reduce(0..35, graph, fn i, g ->
       rpm = i * 100
+
       if rem(i, 5) == 0 do
         g
       else
@@ -210,10 +219,11 @@ defmodule ZfsMeter.Component.Tachometer do
 
   defp draw_labels(graph, side) do
     # Labels in the outer corner area
-    {label_x, align} = case side do
-      :left -> {-@radius + 80, :left}
-      :right -> {@radius - 80, :right}
-    end
+    {label_x, align} =
+      case side do
+        :left -> {-@radius + 80, :left}
+        :right -> {@radius - 80, :right}
+      end
 
     graph
     |> text("RPM",
@@ -237,19 +247,20 @@ defmodule ZfsMeter.Component.Tachometer do
     tail_length = 40
 
     graph
-    |> group(
-      fn g ->
-        g
-        |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
-          stroke: {6, :white},
-          cap: :round
-        )
-        |> line({{0, 0}, {:math.cos(angle + :math.pi()) * tail_length, :math.sin(angle + :math.pi()) * tail_length}},
-          stroke: {6, :white},
-          cap: :round
-        )
-      end
-    )
+    |> group(fn g ->
+      g
+      |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
+        stroke: {6, :white},
+        cap: :round
+      )
+      |> line(
+        {{0, 0},
+         {:math.cos(angle + :math.pi()) * tail_length,
+          :math.sin(angle + :math.pi()) * tail_length}},
+        stroke: {6, :white},
+        cap: :round
+      )
+    end)
   end
 
   defp draw_center_cap(graph) do
@@ -268,6 +279,7 @@ defmodule ZfsMeter.Component.Tachometer do
       :left ->
         # Bottom (π/2) to top (-π/2), going counter-clockwise through LEFT side (π)
         :math.pi() / 2 + fraction * @sweep_angle
+
       :right ->
         # Bottom (π/2) to top (-π/2), going clockwise through RIGHT side (0)
         :math.pi() / 2 - fraction * @sweep_angle
