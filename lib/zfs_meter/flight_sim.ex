@@ -27,7 +27,10 @@ defmodule ZfsMeter.FlightSim do
     :airspeed,
     :ground_altitude,
     :left_oil_temp,
-    :right_oil_temp
+    :right_oil_temp,
+    :pitch,
+    :roll,
+    :roll_phase
   ]
 
   @idle_rpm 800
@@ -57,7 +60,10 @@ defmodule ZfsMeter.FlightSim do
       airspeed: 0,
       ground_altitude: 0,
       left_oil_temp: @oil_temp_ambient,
-      right_oil_temp: @oil_temp_ambient
+      right_oil_temp: @oil_temp_ambient,
+      pitch: 0.0,
+      roll: 0.0,
+      roll_phase: :rand.uniform() * 2 * :math.pi()
     }
   end
 
@@ -67,6 +73,7 @@ defmodule ZfsMeter.FlightSim do
     |> update_rpm(dt_seconds)
     |> update_flight_dynamics(dt_seconds)
     |> update_oil_temps(dt_seconds)
+    |> update_attitude(dt_seconds)
   end
 
   defp update_phase(sim, dt) do
@@ -203,7 +210,8 @@ defmodule ZfsMeter.FlightSim do
     right_target = right_target + (:rand.uniform() - 0.5) * 2
 
     # Oil temp changes slowly (thermal inertia)
-    temp_change_rate = 5  # °C per second
+    # °C per second
+    temp_change_rate = 5
     left_temp = approach_value(sim.left_oil_temp, left_target, temp_change_rate * dt)
     right_temp = approach_value(sim.right_oil_temp, right_target, temp_change_rate * dt)
 
@@ -214,5 +222,54 @@ defmodule ZfsMeter.FlightSim do
     diff = target - current
     change = max(-max_change, min(max_change, diff))
     current + change
+  end
+
+  defp update_attitude(sim, dt) do
+    # Target pitch based on flight phase
+    target_pitch =
+      case sim.phase do
+        :ground_idle -> 0.0
+        :takeoff_roll -> 0.0
+        :rotation -> 12.0
+        :initial_climb -> 10.0
+        :cruise_climb -> 6.0
+        :level_off -> 2.0
+        :cruise -> 1.0
+        :descent -> -5.0
+        :approach -> -3.0
+        :landing -> -2.0
+      end
+
+    # Smoothly approach target pitch
+    # degrees per second
+    pitch_rate = 3.0
+    new_pitch = approach_value(sim.pitch, target_pitch, pitch_rate * dt)
+
+    # Roll oscillates gently during flight (simulates minor corrections)
+    # Use sine wave with slow frequency for natural feel
+    # slow oscillation
+    roll_phase = sim.roll_phase + dt * 0.3
+
+    # Roll amplitude depends on phase (more stable on ground)
+    roll_amplitude =
+      case sim.phase do
+        :ground_idle -> 0.0
+        :takeoff_roll -> 0.0
+        :rotation -> 2.0
+        :initial_climb -> 4.0
+        :cruise_climb -> 3.0
+        :level_off -> 2.0
+        :cruise -> 3.0
+        :descent -> 4.0
+        :approach -> 2.0
+        :landing -> 1.0
+      end
+
+    target_roll = :math.sin(roll_phase) * roll_amplitude
+    # degrees per second
+    roll_rate = 5.0
+    new_roll = approach_value(sim.roll, target_roll, roll_rate * dt)
+
+    %{sim | pitch: new_pitch, roll: new_roll, roll_phase: roll_phase}
   end
 end

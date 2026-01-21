@@ -228,11 +228,12 @@ defmodule ZfsMeter.Component.VSI do
     display = if value >= 0, do: "+#{value}", else: "#{value}"
 
     # Color based on direction
-    color = cond do
-      value > 50 -> @color_up
-      value < -50 -> @color_down
-      true -> @color_text
-    end
+    color =
+      cond do
+        value > 50 -> @color_up
+        value < -50 -> @color_down
+        true -> @color_text
+      end
 
     graph
     |> text(display,

@@ -45,7 +45,8 @@ defmodule ZfsMeter.Component.DualTachometer do
 
   @impl Scenic.Component
   def validate({left_rpm, right_rpm, left_oil, right_oil})
-      when is_number(left_rpm) and is_number(right_rpm) and is_number(left_oil) and is_number(right_oil) do
+      when is_number(left_rpm) and is_number(right_rpm) and is_number(left_oil) and
+             is_number(right_oil) do
     {:ok, {left_rpm, right_rpm, left_oil, right_oil}}
   end
 
@@ -119,8 +120,8 @@ defmodule ZfsMeter.Component.DualTachometer do
     right_rpm = right_current + (right_target - right_current) * 0.1
 
     # Simulate oil temps (correlate with RPM)
-    left_oil_sim = 50 + (left_rpm / @max_rpm) * 60
-    right_oil_sim = 50 + (right_rpm / @max_rpm) * 60
+    left_oil_sim = 50 + left_rpm / @max_rpm * 60
+    right_oil_sim = 50 + right_rpm / @max_rpm * 60
 
     graph = build_graph(left_rpm, right_rpm, left_oil_sim, right_oil_sim)
 
@@ -316,10 +317,11 @@ defmodule ZfsMeter.Component.DualTachometer do
 
   defp draw_oil_temp(graph, temp, side) do
     # Position between center and numbers 15/20
-    x = case side do
-      :left -> -150
-      :right -> 150
-    end
+    x =
+      case side do
+        :left -> -150
+        :right -> 150
+      end
 
     # 7 bars configuration
     bar_width = 28
@@ -334,13 +336,20 @@ defmodule ZfsMeter.Component.DualTachometer do
 
     # Bar colors: yellow -> orange -> red gradient
     bar_colors = [
-      {255, 220, 0},   # Bar 1 - yellow (cold)
-      {255, 180, 0},   # Bar 2 - amber
-      {255, 140, 0},   # Bar 3 - orange (optimal)
-      {255, 100, 0},   # Bar 4 - deep orange (optimal)
-      {255, 60, 0},    # Bar 5 - red-orange
-      {255, 30, 0},    # Bar 6 - warm red
-      {255, 0, 0}      # Bar 7 - red (hot)
+      # Bar 1 - yellow (cold)
+      {255, 220, 0},
+      # Bar 2 - amber
+      {255, 180, 0},
+      # Bar 3 - orange (optimal)
+      {255, 140, 0},
+      # Bar 4 - deep orange (optimal)
+      {255, 100, 0},
+      # Bar 5 - red-orange
+      {255, 60, 0},
+      # Bar 6 - warm red
+      {255, 30, 0},
+      # Bar 7 - red (hot)
+      {255, 0, 0}
     ]
 
     # Dim versions of colors for inactive bars
@@ -354,13 +363,14 @@ defmodule ZfsMeter.Component.DualTachometer do
       # Bar is active if temp >= threshold
       active = temp >= threshold
 
-      fill = if active do
-        color
-      else
-        # Dim the color
-        {r, g_val, b} = color
-        {trunc(r * dim_factor), trunc(g_val * dim_factor), trunc(b * dim_factor)}
-      end
+      fill =
+        if active do
+          color
+        else
+          # Dim the color
+          {r, g_val, b} = color
+          {trunc(r * dim_factor), trunc(g_val * dim_factor), trunc(b * dim_factor)}
+        end
 
       g
       |> rrect({bar_width, bar_height, 2},

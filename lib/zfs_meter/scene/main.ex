@@ -7,6 +7,7 @@ defmodule ZfsMeter.Scene.Main do
   alias ZfsMeter.Component.DualTachometer
   alias ZfsMeter.Component.Altimeter
   alias ZfsMeter.Component.VSI
+  alias ZfsMeter.Component.AttitudeIndicator
   alias ZfsMeter.FlightSim
 
   # Grid layout: 3 columns x 2 rows
@@ -49,7 +50,7 @@ defmodule ZfsMeter.Scene.Main do
       |> draw_widget_frame(2, 0, "Vertical Speed")
       # Row 2 - placeholders
       |> draw_widget_frame(0, 1, "Widget 4")
-      |> draw_widget_frame(1, 1, "Widget 5")
+      |> draw_widget_frame(1, 1, "Attitude")
       |> draw_widget_frame(2, 1, "Widget 6")
       # Flight status display
       |> add_flight_status()
@@ -57,6 +58,7 @@ defmodule ZfsMeter.Scene.Main do
       |> add_tachometers(0, 0, flight_sim)
       |> add_altimeter(1, 0, flight_sim)
       |> add_vsi(2, 0, flight_sim)
+      |> add_attitude_indicator(1, 1, flight_sim)
 
     # Start simulation tick
     Process.send_after(self(), :tick, @tick_interval)
@@ -76,9 +78,16 @@ defmodule ZfsMeter.Scene.Main do
     new_sim = FlightSim.tick(sim, dt)
 
     # Push updated values to components
-    :ok = put_child(scene, :engines_rpm, {new_sim.left_rpm, new_sim.right_rpm, new_sim.left_oil_temp, new_sim.right_oil_temp})
+    :ok =
+      put_child(
+        scene,
+        :engines_rpm,
+        {new_sim.left_rpm, new_sim.right_rpm, new_sim.left_oil_temp, new_sim.right_oil_temp}
+      )
+
     :ok = put_child(scene, :altimeter, new_sim.altitude)
     :ok = put_child(scene, :vsi, new_sim.vertical_speed)
+    :ok = put_child(scene, :attitude_indicator, {new_sim.pitch, new_sim.roll})
 
     # Update flight status display
     graph =
@@ -118,8 +127,8 @@ defmodule ZfsMeter.Scene.Main do
   end
 
   defp add_flight_status(graph) do
-    # Add flight status in bottom row
-    {x, y} = cell_origin(1, 1)
+    # Add flight status in Widget 4 area (bottom-left)
+    {x, y} = cell_origin(0, 1)
     cx = x + @col_width / 2
 
     graph
@@ -196,6 +205,20 @@ defmodule ZfsMeter.Scene.Main do
       sim.vertical_speed,
       id: :vsi,
       translate: {cx - 360, cy - 360},
+      simulate: false
+    )
+  end
+
+  defp add_attitude_indicator(graph, col, row, sim) do
+    {x, y} = cell_origin(col, row)
+    cx = x + @col_width / 2
+    cy = y + @row_height / 2 + 30
+
+    graph
+    |> AttitudeIndicator.add_to_graph(
+      {sim.pitch, sim.roll},
+      id: :attitude_indicator,
+      translate: {cx - 330, cy - 330},
       simulate: false
     )
   end
