@@ -72,6 +72,7 @@ defmodule ZfsMeter.FlightSim do
     |> update_phase(dt_seconds)
     |> update_rpm(dt_seconds)
     |> update_flight_dynamics(dt_seconds)
+    |> update_airspeed(dt_seconds)
     |> update_oil_temps(dt_seconds)
     |> update_attitude(dt_seconds)
   end
@@ -193,6 +194,35 @@ defmodule ZfsMeter.FlightSim do
     new_vs = approach_value(sim.vertical_speed, target_vs, vs_change_rate * dt)
 
     %{sim | vertical_speed: new_vs, altitude: altitude}
+  end
+
+  defp update_airspeed(sim, dt) do
+    # Target airspeed based on flight phase (knots)
+    # Typical light twin aircraft speeds
+    target_airspeed =
+      case sim.phase do
+        :ground_idle -> 0
+        :takeoff_roll -> 70 * min(1.0, sim.phase_timer / 4.0)
+        :rotation -> 75
+        :initial_climb -> 95
+        :cruise_climb -> 120
+        :level_off -> 140
+        :cruise -> 145
+        :descent -> 130
+        :approach -> 90
+        :landing -> max(0, 70 - sim.phase_timer * 25)
+      end
+
+    # Airspeed changes gradually
+    # knots per second
+    airspeed_rate = 15
+    new_airspeed = approach_value(sim.airspeed, target_airspeed, airspeed_rate * dt)
+
+    # Add slight variation for realism
+    variation = (:rand.uniform() - 0.5) * 2
+    new_airspeed = max(0, new_airspeed + variation * dt)
+
+    %{sim | airspeed: new_airspeed}
   end
 
   defp update_oil_temps(sim, dt) do

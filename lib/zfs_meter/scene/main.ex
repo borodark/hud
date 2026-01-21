@@ -8,6 +8,7 @@ defmodule ZfsMeter.Scene.Main do
   alias ZfsMeter.Component.Altimeter
   alias ZfsMeter.Component.VSI
   alias ZfsMeter.Component.AttitudeIndicator
+  alias ZfsMeter.Component.AirspeedIndicator
   alias ZfsMeter.FlightSim
 
   # Grid layout: 3 columns x 2 rows
@@ -48,8 +49,8 @@ defmodule ZfsMeter.Scene.Main do
       |> draw_widget_frame(0, 0, "Engine RPM")
       |> draw_widget_frame(1, 0, "Altimeter")
       |> draw_widget_frame(2, 0, "Vertical Speed")
-      # Row 2 - placeholders
-      |> draw_widget_frame(0, 1, "Widget 4")
+      # Row 2
+      |> draw_widget_frame(0, 1, "Airspeed")
       |> draw_widget_frame(1, 1, "Attitude")
       |> draw_widget_frame(2, 1, "Widget 6")
       # Flight status display
@@ -59,6 +60,7 @@ defmodule ZfsMeter.Scene.Main do
       |> add_altimeter(1, 0, flight_sim)
       |> add_vsi(2, 0, flight_sim)
       |> add_attitude_indicator(1, 1, flight_sim)
+      |> add_airspeed_indicator(0, 1, flight_sim)
 
     # Start simulation tick
     Process.send_after(self(), :tick, @tick_interval)
@@ -88,6 +90,7 @@ defmodule ZfsMeter.Scene.Main do
     :ok = put_child(scene, :altimeter, new_sim.altitude)
     :ok = put_child(scene, :vsi, new_sim.vertical_speed)
     :ok = put_child(scene, :attitude_indicator, {new_sim.pitch, new_sim.roll})
+    :ok = put_child(scene, :airspeed_indicator, new_sim.airspeed)
 
     # Update flight status display
     graph =
@@ -127,8 +130,8 @@ defmodule ZfsMeter.Scene.Main do
   end
 
   defp add_flight_status(graph) do
-    # Add flight status in Widget 4 area (bottom-left)
-    {x, y} = cell_origin(0, 1)
+    # Add flight status in Widget 6 area (bottom-right)
+    {x, y} = cell_origin(2, 1)
     cx = x + @col_width / 2
 
     graph
@@ -218,6 +221,20 @@ defmodule ZfsMeter.Scene.Main do
     |> AttitudeIndicator.add_to_graph(
       {sim.pitch, sim.roll},
       id: :attitude_indicator,
+      translate: {cx - 330, cy - 330},
+      simulate: false
+    )
+  end
+
+  defp add_airspeed_indicator(graph, col, row, sim) do
+    {x, y} = cell_origin(col, row)
+    cx = x + @col_width / 2
+    cy = y + @row_height / 2 + 30
+
+    graph
+    |> AirspeedIndicator.add_to_graph(
+      sim.airspeed,
+      id: :airspeed_indicator,
       translate: {cx - 330, cy - 330},
       simulate: false
     )
