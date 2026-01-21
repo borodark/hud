@@ -7,6 +7,7 @@ defmodule ZfsMeter.Component.DualTachometer do
   use Scenic.Component, has_children: false
 
   alias Scenic.Graph
+  alias ZfsMeter.ColorScheme
   import Scenic.Primitives
 
   @radius 320
@@ -24,24 +25,6 @@ defmodule ZfsMeter.Component.DualTachometer do
 
   # Semicircle sweep (180 degrees)
   @sweep_angle :math.pi()
-
-  # OLED color palette (yellow -> red spectrum + black)
-  @color_black {0, 0, 0}
-  @color_yellow {255, 220, 0}
-  @color_amber {255, 180, 0}
-  @color_orange {255, 140, 0}
-  @color_deep_orange {255, 100, 0}
-  @color_red_orange {255, 60, 0}
-  @color_warm_red {255, 30, 0}
-  @color_red {255, 0, 0}
-
-  # Semantic aliases
-  @color_bg @color_black
-  @color_dial @color_black
-  @color_border @color_deep_orange
-  @color_text @color_amber
-  @color_needle @color_orange
-  @color_tick @color_warm_red
 
   @impl Scenic.Component
   def validate({left_rpm, right_rpm, left_oil, right_oil})
@@ -141,39 +124,41 @@ defmodule ZfsMeter.Component.DualTachometer do
   end
 
   defp build_graph(left_rpm, right_rpm, left_oil, right_oil) do
+    c = ColorScheme.current()
+
     Graph.build()
     |> group(
       fn g ->
         g
         # Draw both dial faces first (backgrounds)
-        |> draw_dial_face(:left)
-        |> draw_dial_face(:right)
+        |> draw_dial_face(:left, c)
+        |> draw_dial_face(:right, c)
         # Then colored arcs for both
-        |> draw_colored_arcs(:left)
-        |> draw_colored_arcs(:right)
+        |> draw_colored_arcs(:left, c)
+        |> draw_colored_arcs(:right, c)
         # Tick marks for both
-        |> draw_tick_marks(:left)
-        |> draw_tick_marks(:right)
+        |> draw_tick_marks(:left, c)
+        |> draw_tick_marks(:right, c)
         # Numbers for both
-        |> draw_numbers(:left)
-        |> draw_numbers(:right)
+        |> draw_numbers(:left, c)
+        |> draw_numbers(:right, c)
         # Labels for both
-        |> draw_labels(:left)
-        |> draw_labels(:right)
+        |> draw_labels(:left, c)
+        |> draw_labels(:right, c)
         # Oil temperature displays
-        |> draw_oil_temp(left_oil, :left)
-        |> draw_oil_temp(right_oil, :right)
+        |> draw_oil_temp(left_oil, :left, c)
+        |> draw_oil_temp(right_oil, :right, c)
         # Both needles
-        |> draw_needle(left_rpm, :left)
-        |> draw_needle(right_rpm, :right)
+        |> draw_needle(left_rpm, :left, c)
+        |> draw_needle(right_rpm, :right, c)
         # Single shared center cap (drawn last, on top)
-        |> draw_center_cap()
+        |> draw_center_cap(c)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph, side) do
+  defp draw_dial_face(graph, side, c) do
     {start, sweep} =
       case side do
         # Bottom to top, curving left
@@ -184,25 +169,25 @@ defmodule ZfsMeter.Component.DualTachometer do
 
     graph
     |> sector({@radius, sweep},
-      fill: @color_bg,
-      stroke: {6, @color_border},
+      fill: c.bg,
+      stroke: {6, c.border},
       rotate: start
     )
     |> sector({@radius - 6, sweep},
-      fill: @color_dial,
+      fill: c.bg,
       rotate: start
     )
   end
 
-  defp draw_colored_arcs(graph, side) do
+  defp draw_colored_arcs(graph, side, c) do
     arc_radius = @radius - 35
     arc_width = 22
 
     graph
-    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, @color_orange, side)
-    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, @color_deep_orange, side)
-    |> draw_range_arc(arc_radius, arc_width, @yellow_max, @max_rpm, @color_red, side)
-    |> draw_redline(side)
+    |> draw_range_arc(arc_radius, arc_width, @green_min, @green_max, c.arc_green, side)
+    |> draw_range_arc(arc_radius, arc_width, @green_max, @yellow_max, c.arc_yellow, side)
+    |> draw_range_arc(arc_radius, arc_width, @yellow_max, @max_rpm, c.arc_red, side)
+    |> draw_redline(side, c)
   end
 
   defp draw_range_arc(graph, arc_radius, arc_width, rpm_start, rpm_end, color, side) do
@@ -219,7 +204,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     )
   end
 
-  defp draw_redline(graph, side) do
+  defp draw_redline(graph, side, c) do
     angle = rpm_to_angle(@redline, side)
     inner = @radius - 65
     outer = @radius - 12
@@ -230,24 +215,24 @@ defmodule ZfsMeter.Component.DualTachometer do
     y2 = :math.sin(angle) * outer
 
     graph
-    |> line({{x1, y1}, {x2, y2}}, stroke: {5, @color_red}, cap: :round)
+    |> line({{x1, y1}, {x2, y2}}, stroke: {5, c.arc_red}, cap: :round)
   end
 
-  defp draw_tick_marks(graph, side) do
+  defp draw_tick_marks(graph, side, c) do
     graph
-    |> draw_major_ticks(side)
-    |> draw_minor_ticks(side)
+    |> draw_major_ticks(side, c)
+    |> draw_minor_ticks(side, c)
   end
 
-  defp draw_major_ticks(graph, side) do
+  defp draw_major_ticks(graph, side, c) do
     Enum.reduce(0..7, graph, fn i, g ->
       rpm = i * 500
       angle = rpm_to_angle(rpm, side)
-      draw_tick(g, angle, 6, 45)
+      draw_tick(g, angle, 6, 45, c)
     end)
   end
 
-  defp draw_minor_ticks(graph, side) do
+  defp draw_minor_ticks(graph, side, c) do
     Enum.reduce(0..35, graph, fn i, g ->
       rpm = i * 100
 
@@ -255,12 +240,12 @@ defmodule ZfsMeter.Component.DualTachometer do
         g
       else
         angle = rpm_to_angle(rpm, side)
-        draw_tick(g, angle, 2, 28)
+        draw_tick(g, angle, 2, 28, c)
       end
     end)
   end
 
-  defp draw_tick(graph, angle, width, length) do
+  defp draw_tick(graph, angle, width, length, c) do
     inner = @radius - 12 - length
     outer = @radius - 12
 
@@ -269,10 +254,10 @@ defmodule ZfsMeter.Component.DualTachometer do
     x2 = :math.cos(angle) * outer
     y2 = :math.sin(angle) * outer
 
-    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, @color_tick}, cap: :round)
+    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, c.tick}, cap: :round)
   end
 
-  defp draw_numbers(graph, side) do
+  defp draw_numbers(graph, side, c) do
     numbers = [0, 5, 10, 15, 20, 25, 30, 35]
 
     Enum.reduce(numbers, graph, fn n, g ->
@@ -285,7 +270,7 @@ defmodule ZfsMeter.Component.DualTachometer do
 
       g
       |> text("#{n}",
-        fill: @color_text,
+        fill: c.primary,
         font_size: 38,
         text_align: :center,
         translate: {x, y + 14}
@@ -293,7 +278,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     end)
   end
 
-  defp draw_labels(graph, side) do
+  defp draw_labels(graph, side, c) do
     {label_x, align} =
       case side do
         :left -> {-@radius + 80, :left}
@@ -302,20 +287,20 @@ defmodule ZfsMeter.Component.DualTachometer do
 
     graph
     |> text("RPM",
-      fill: @color_text,
+      fill: c.primary,
       font_size: 32,
       text_align: align,
       translate: {label_x, -@radius + 100}
     )
     |> text("×100",
-      fill: @color_tick,
+      fill: c.tick,
       font_size: 24,
       text_align: align,
       translate: {label_x, -@radius + 135}
     )
   end
 
-  defp draw_oil_temp(graph, temp, side) do
+  defp draw_oil_temp(graph, temp, side, c) do
     # Position between center and numbers 15/20
     x =
       case side do
@@ -334,22 +319,15 @@ defmodule ZfsMeter.Component.DualTachometer do
     # Bars light up as temp increases
     thresholds = [30, 50, 65, 80, 95, 105, 115]
 
-    # Bar colors: yellow -> orange -> red gradient
+    # Bar colors: use scheme colors in a gradient
     bar_colors = [
-      # Bar 1 - yellow (cold)
-      {255, 220, 0},
-      # Bar 2 - amber
-      {255, 180, 0},
-      # Bar 3 - orange (optimal)
-      {255, 140, 0},
-      # Bar 4 - deep orange (optimal)
-      {255, 100, 0},
-      # Bar 5 - red-orange
-      {255, 60, 0},
-      # Bar 6 - warm red
-      {255, 30, 0},
-      # Bar 7 - red (hot)
-      {255, 0, 0}
+      c.accent,      # Bar 1 - cold
+      c.primary,     # Bar 2
+      c.secondary,   # Bar 3 - optimal
+      c.needle,      # Bar 4 - optimal
+      c.warning,     # Bar 5
+      c.tick,        # Bar 6
+      c.critical     # Bar 7 - hot
     ]
 
     # Dim versions of colors for inactive bars
@@ -380,7 +358,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     end)
   end
 
-  defp draw_needle(graph, rpm, side) do
+  defp draw_needle(graph, rpm, side, c) do
     clamped = max(@min_rpm, min(@max_rpm, rpm))
     angle = rpm_to_angle(clamped, side)
     needle_length = @radius - 50
@@ -390,23 +368,23 @@ defmodule ZfsMeter.Component.DualTachometer do
     |> group(fn g ->
       g
       |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
-        stroke: {6, @color_needle},
+        stroke: {6, c.needle},
         cap: :round
       )
       |> line(
         {{0, 0},
          {:math.cos(angle + :math.pi()) * tail_length,
           :math.sin(angle + :math.pi()) * tail_length}},
-        stroke: {6, @color_needle},
+        stroke: {6, c.needle},
         cap: :round
       )
     end)
   end
 
-  defp draw_center_cap(graph) do
+  defp draw_center_cap(graph, c) do
     graph
-    |> circle(28, fill: @color_black, stroke: {4, @color_border})
-    |> circle(12, fill: @color_deep_orange)
+    |> circle(28, fill: c.bg, stroke: {4, c.border})
+    |> circle(12, fill: c.border)
   end
 
   # Convert RPM to angle

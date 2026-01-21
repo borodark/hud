@@ -10,37 +10,15 @@ defmodule ZfsMeter.Component.VSI do
   use Scenic.Component, has_children: false
 
   alias Scenic.Graph
+  alias ZfsMeter.ColorScheme
   import Scenic.Primitives
 
   @radius 340
   @update_interval 50
 
   # Scale configuration
-  # ft/min
   @max_rate 2000
-  # The needle sweeps 150 degrees each direction from zero (at 9 o'clock)
-  # 150 degrees in radians
   @sweep_angle :math.pi() * 5 / 6
-
-  # OLED color palette (yellow -> red spectrum + black)
-  @color_black {0, 0, 0}
-  @color_yellow {255, 220, 0}
-  @color_amber {255, 180, 0}
-  @color_orange {255, 140, 0}
-  @color_deep_orange {255, 100, 0}
-  @color_red_orange {255, 60, 0}
-  @color_warm_red {255, 30, 0}
-  @color_red {255, 0, 0}
-
-  # Semantic aliases
-  @color_bg @color_black
-  @color_dial @color_black
-  @color_border @color_deep_orange
-  @color_text @color_amber
-  @color_tick @color_warm_red
-  @color_needle @color_orange
-  @color_up @color_yellow
-  @color_down @color_red
 
   @impl Scenic.Component
   def validate(rate) when is_number(rate), do: {:ok, rate}
@@ -62,7 +40,6 @@ defmodule ZfsMeter.Component.VSI do
     |> then(&{:ok, &1})
   end
 
-  # Handle external updates from parent scene
   @impl Scenic.Scene
   def handle_put(rate, scene) when is_number(rate) do
     graph = build_graph(rate)
@@ -81,16 +58,13 @@ defmodule ZfsMeter.Component.VSI do
   def handle_info(:tick, scene) do
     %{rate: current, target: target} = scene.assigns
 
-    # Randomly adjust target occasionally
     target =
       if :rand.uniform() < 0.03 do
-        # Random rate between -1500 and +1500
         (:rand.uniform() - 0.5) * 3000
       else
         target
       end
 
-    # Smoothly move toward target
     diff = target - current
     new_rate = current + diff * 0.08
 
@@ -105,65 +79,64 @@ defmodule ZfsMeter.Component.VSI do
   end
 
   defp build_graph(rate) do
+    c = ColorScheme.current()
+
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face()
-        |> draw_tick_marks()
-        |> draw_numbers()
-        |> draw_labels()
-        |> draw_readout(rate)
-        |> draw_needle(rate)
-        |> draw_center_cap()
+        |> draw_dial_face(c)
+        |> draw_tick_marks(c)
+        |> draw_numbers(c)
+        |> draw_labels(c)
+        |> draw_readout(rate, c)
+        |> draw_needle(rate, c)
+        |> draw_center_cap(c)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph) do
+  defp draw_dial_face(graph, c) do
     graph
-    |> circle(@radius, fill: @color_bg, stroke: {8, @color_border})
-    |> circle(@radius - 8, fill: @color_dial)
+    |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+    |> circle(@radius - 8, fill: c.bg)
   end
 
-  defp draw_tick_marks(graph) do
+  defp draw_tick_marks(graph, c) do
     graph
-    |> draw_major_ticks()
-    |> draw_minor_ticks()
+    |> draw_major_ticks(c)
+    |> draw_minor_ticks(c)
   end
 
-  # Major ticks at 0, 500, 1000, 1500, 2000 (both up and down)
-  defp draw_major_ticks(graph) do
+  defp draw_major_ticks(graph, c) do
     values = [0, 500, 1000, 1500, 2000]
 
     graph
-    |> draw_ticks_for_values(values, :up, 8, 55)
-    |> draw_ticks_for_values(values, :down, 8, 55)
+    |> draw_ticks_for_values(values, :up, 8, 55, c)
+    |> draw_ticks_for_values(values, :down, 8, 55, c)
   end
 
-  # Minor ticks at 250, 750, 1250, 1750
-  defp draw_minor_ticks(graph) do
+  defp draw_minor_ticks(graph, c) do
     values = [250, 750, 1250, 1750]
 
     graph
-    |> draw_ticks_for_values(values, :up, 3, 35)
-    |> draw_ticks_for_values(values, :down, 3, 35)
+    |> draw_ticks_for_values(values, :up, 3, 35, c)
+    |> draw_ticks_for_values(values, :down, 3, 35, c)
   end
 
-  defp draw_ticks_for_values(graph, values, direction, width, length) do
+  defp draw_ticks_for_values(graph, values, direction, width, length, c) do
     Enum.reduce(values, graph, fn value, g ->
-      # Skip zero for down direction (already drawn in up)
       if value == 0 and direction == :down do
         g
       else
         angle = value_to_angle(value, direction)
-        draw_tick(g, angle, width, length)
+        draw_tick(g, angle, width, length, c)
       end
     end)
   end
 
-  defp draw_tick(graph, angle, width, length) do
+  defp draw_tick(graph, angle, width, length, c) do
     inner = @radius - 15 - length
     outer = @radius - 15
 
@@ -172,25 +145,23 @@ defmodule ZfsMeter.Component.VSI do
     x2 = :math.cos(angle) * outer
     y2 = :math.sin(angle) * outer
 
-    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, @color_tick}, cap: :round)
+    graph |> line({{x1, y1}, {x2, y2}}, stroke: {width, c.tick}, cap: :round)
   end
 
-  defp draw_numbers(graph) do
-    # Numbers for climb side (right)
+  defp draw_numbers(graph, c) do
     graph
-    |> draw_number(0, :up, "0")
-    |> draw_number(500, :up, "5")
-    |> draw_number(1000, :up, "10")
-    |> draw_number(1500, :up, "15")
-    |> draw_number(2000, :up, "20")
-    # Numbers for descent side (left) - skip 0
-    |> draw_number(500, :down, "5")
-    |> draw_number(1000, :down, "10")
-    |> draw_number(1500, :down, "15")
-    |> draw_number(2000, :down, "20")
+    |> draw_number(0, :up, "0", c)
+    |> draw_number(500, :up, "5", c)
+    |> draw_number(1000, :up, "10", c)
+    |> draw_number(1500, :up, "15", c)
+    |> draw_number(2000, :up, "20", c)
+    |> draw_number(500, :down, "5", c)
+    |> draw_number(1000, :down, "10", c)
+    |> draw_number(1500, :down, "15", c)
+    |> draw_number(2000, :down, "20", c)
   end
 
-  defp draw_number(graph, value, direction, label) do
+  defp draw_number(graph, value, direction, label, c) do
     angle = value_to_angle(value, direction)
     dist = @radius - 100
 
@@ -199,40 +170,38 @@ defmodule ZfsMeter.Component.VSI do
 
     graph
     |> text(label,
-      fill: @color_text,
+      fill: c.primary,
       font_size: 48,
       text_align: :center,
       translate: {x, y + 16}
     )
   end
 
-  defp draw_labels(graph) do
+  defp draw_labels(graph, c) do
     graph
     |> text("UP",
-      fill: @color_up,
+      fill: c.positive,
       font_size: 36,
       text_align: :center,
       translate: {-100, -120}
     )
     |> text("DN",
-      fill: @color_down,
+      fill: c.negative,
       font_size: 36,
       text_align: :center,
       translate: {-100, 120}
     )
   end
 
-  defp draw_readout(graph, rate) do
-    # Format the rate value
-    value = trunc(rate)
+  defp draw_readout(graph, rate, c) do
+    value = round(rate / 50) * 50
     display = if value >= 0, do: "+#{value}", else: "#{value}"
 
-    # Color based on direction
     color =
       cond do
-        value > 50 -> @color_up
-        value < -50 -> @color_down
-        true -> @color_text
+        value > 50 -> c.positive
+        value < -50 -> c.negative
+        true -> c.primary
       end
 
     graph
@@ -244,8 +213,7 @@ defmodule ZfsMeter.Component.VSI do
     )
   end
 
-  defp draw_needle(graph, rate) do
-    # Clamp rate to scale
+  defp draw_needle(graph, rate, c) do
     clamped = max(-@max_rate, min(@max_rate, rate))
 
     direction = if clamped >= 0, do: :up, else: :down
@@ -254,42 +222,35 @@ defmodule ZfsMeter.Component.VSI do
     needle_length = @radius - 70
     tail_length = 55
 
-    # Needle rotation (angle is already in standard position)
     graph
     |> group(fn g ->
       g
       |> line({{0, 0}, {:math.cos(angle) * needle_length, :math.sin(angle) * needle_length}},
-        stroke: {8, @color_needle},
+        stroke: {8, c.needle},
         cap: :round
       )
-      # Small tail in opposite direction
       |> line(
         {{0, 0},
          {:math.cos(angle + :math.pi()) * tail_length,
           :math.sin(angle + :math.pi()) * tail_length}},
-        stroke: {8, @color_needle},
+        stroke: {8, c.needle},
         cap: :round
       )
     end)
   end
 
-  defp draw_center_cap(graph) do
+  defp draw_center_cap(graph, c) do
     graph
-    |> circle(35, fill: @color_black, stroke: {5, @color_border})
-    |> circle(15, fill: @color_deep_orange)
+    |> circle(35, fill: c.bg, stroke: {5, c.border})
+    |> circle(15, fill: c.border)
   end
 
-  # Convert value to angle
-  # Zero is at 9 o'clock (pointing left, angle = π)
-  # In screen coords (Y down): UP goes toward 12 o'clock (3π/2), DN toward 6 o'clock (π/2)
   defp value_to_angle(value, :up) do
-    # 0 -> π (9 o'clock), 2000 -> π + sweep_angle (toward 12 o'clock)
     fraction = value / @max_rate
     :math.pi() + fraction * @sweep_angle
   end
 
   defp value_to_angle(value, :down) do
-    # 0 -> π (9 o'clock), 2000 -> π - sweep_angle (toward 6 o'clock)
     fraction = value / @max_rate
     :math.pi() - fraction * @sweep_angle
   end

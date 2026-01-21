@@ -30,7 +30,9 @@ defmodule ZfsMeter.FlightSim do
     :right_oil_temp,
     :pitch,
     :roll,
-    :roll_phase
+    :roll_phase,
+    :heading,
+    :target_heading
   ]
 
   @idle_rpm 800
@@ -63,7 +65,9 @@ defmodule ZfsMeter.FlightSim do
       right_oil_temp: @oil_temp_ambient,
       pitch: 0.0,
       roll: 0.0,
-      roll_phase: :rand.uniform() * 2 * :math.pi()
+      roll_phase: :rand.uniform() * 2 * :math.pi(),
+      heading: 270.0,
+      target_heading: 270.0
     }
   end
 
@@ -75,6 +79,7 @@ defmodule ZfsMeter.FlightSim do
     |> update_airspeed(dt_seconds)
     |> update_oil_temps(dt_seconds)
     |> update_attitude(dt_seconds)
+    |> update_heading(dt_seconds)
   end
 
   defp update_phase(sim, dt) do
@@ -218,11 +223,7 @@ defmodule ZfsMeter.FlightSim do
     airspeed_rate = 15
     new_airspeed = approach_value(sim.airspeed, target_airspeed, airspeed_rate * dt)
 
-    # Add slight variation for realism
-    variation = (:rand.uniform() - 0.5) * 2
-    new_airspeed = max(0, new_airspeed + variation * dt)
-
-    %{sim | airspeed: new_airspeed}
+    %{sim | airspeed: max(0, new_airspeed)}
   end
 
   defp update_oil_temps(sim, dt) do
@@ -301,5 +302,55 @@ defmodule ZfsMeter.FlightSim do
     new_roll = approach_value(sim.roll, target_roll, roll_rate * dt)
 
     %{sim | pitch: new_pitch, roll: new_roll, roll_phase: roll_phase}
+  end
+
+  defp update_heading(sim, dt) do
+    # Heading changes based on flight phase
+    # Simulate a flight pattern: takeoff heading 270, turn to 360 for cruise,
+    # then turn to 090 for approach back to runway
+
+    target_heading =
+      case sim.phase do
+        :ground_idle -> 270.0
+        :takeoff_roll -> 270.0
+        :rotation -> 270.0
+        :initial_climb -> 270.0
+        :cruise_climb -> 360.0
+        :level_off -> 360.0
+        :cruise -> 360.0
+        :descent -> 090.0
+        :approach -> 090.0
+        :landing -> 090.0
+      end
+
+    # Calculate shortest turn direction
+    diff = target_heading - sim.heading
+    diff = cond do
+      diff > 180 -> diff - 360
+      diff < -180 -> diff + 360
+      true -> diff
+    end
+
+    # Turn rate depends on phase (degrees per second)
+    turn_rate =
+      case sim.phase do
+        :ground_idle -> 0.0
+        :takeoff_roll -> 0.0
+        :rotation -> 0.0
+        _ -> 3.0
+      end
+
+    # Apply turn
+    heading_change = max(-turn_rate * dt, min(turn_rate * dt, diff))
+    new_heading = sim.heading + heading_change
+
+    # Normalize to 0-360
+    new_heading = cond do
+      new_heading >= 360 -> new_heading - 360
+      new_heading < 0 -> new_heading + 360
+      true -> new_heading
+    end
+
+    %{sim | heading: new_heading, target_heading: target_heading}
   end
 end
