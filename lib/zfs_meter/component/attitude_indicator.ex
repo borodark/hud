@@ -116,7 +116,7 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
         |> maybe_draw_aircraft_symbol(c, config)
         |> maybe_draw_border(c, config)
       end,
-      translate: {0, 0}
+      scissor: {config.width, config.height}
     )
   end
 

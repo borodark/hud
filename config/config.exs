@@ -1,7 +1,7 @@
 import Config
 
 config :scenic, :assets, module: ZfsMeter.Assets
-config :zfs_meter, color_scheme: :sunny_day
+config :zfs_meter, color_scheme: :dark_bmw #:sunny_day # 
 
 config :zfs_meter, :viewport,
   name: :main_viewport,
