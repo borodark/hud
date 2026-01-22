@@ -1,4 +1,4 @@
-# Six Pac UX using Scenic
+# Six Pack UX using Scenic
 
 Inspired by:
 - 2018 talk of https://github.com/boydm 
