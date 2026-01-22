@@ -36,22 +36,24 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
   @impl Scenic.Scene
   def init(scene, airspeed, opts) do
     simulate = Keyword.get(opts, :simulate, true)
+    transparent_bg = Keyword.get(opts, :transparent_bg, false)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(airspeed)
+    graph = build_graph(airspeed, transparent_bg)
 
     scene
-    |> assign(airspeed: airspeed, target: airspeed, simulate: simulate)
+    |> assign(airspeed: airspeed, target: airspeed, simulate: simulate, transparent_bg: transparent_bg)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
   @impl Scenic.Scene
   def handle_put(airspeed, scene) when is_number(airspeed) do
-    graph = build_graph(airspeed)
+    %{transparent_bg: transparent_bg} = scene.assigns
+    graph = build_graph(airspeed, transparent_bg)
 
     scene
     |> assign(airspeed: airspeed)
@@ -65,7 +67,7 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
   end
 
   def handle_info(:tick, scene) do
-    %{airspeed: current, target: target} = scene.assigns
+    %{airspeed: current, target: target, transparent_bg: transparent_bg} = scene.assigns
 
     target =
       if :rand.uniform() < 0.03 do
@@ -77,7 +79,7 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
     diff = target - current
     new_airspeed = current + diff * 0.08
 
-    graph = build_graph(new_airspeed)
+    graph = build_graph(new_airspeed, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -87,30 +89,35 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(airspeed) do
+  defp build_graph(airspeed, transparent_bg) do
     c = ColorScheme.current()
 
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face(c)
+        |> draw_dial_face(c, transparent_bg)
         |> draw_speed_arcs(c)
         |> draw_tick_marks(c)
         |> draw_numbers(c)
         |> draw_label(c)
         |> draw_readout(airspeed, c)
         |> draw_needle(airspeed, c)
-        |> draw_center_cap(c)
+        |> draw_center_cap(c, transparent_bg)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph, c) do
-    graph
-    |> circle(@radius, fill: c.bg, stroke: {8, c.border})
-    |> circle(@radius - 8, fill: c.bg)
+  defp draw_dial_face(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(@radius, stroke: {8, c.border})
+    else
+      graph
+      |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+      |> circle(@radius - 8, fill: c.bg)
+    end
   end
 
   defp draw_speed_arcs(graph, c) do
@@ -277,10 +284,16 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
     )
   end
 
-  defp draw_center_cap(graph, c) do
-    graph
-    |> circle(30, fill: c.bg, stroke: {5, c.border})
-    |> circle(12, fill: c.border)
+  defp draw_center_cap(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(30, stroke: {5, c.border})
+      |> circle(12, fill: c.border)
+    else
+      graph
+      |> circle(30, fill: c.bg, stroke: {5, c.border})
+      |> circle(12, fill: c.border)
+    end
   end
 
   defp speed_to_angle(speed) do

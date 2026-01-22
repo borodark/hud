@@ -36,20 +36,21 @@ defmodule ZfsMeter.Scene.Main do
       Graph.build(font: :roboto, font_size: 24)
       |> maybe_add_attitude_background(flight_sim, attitude_background)
       # Row 1
-      |> draw_widget_frame(0, 0, "Engine RPM", c)
-      |> draw_widget_frame(1, 0, "Altimeter", c)
-      |> draw_widget_frame(2, 0, "Vertical Speed", c)
+      |> draw_widget_frame(0, 0, "Engine RPM", c, attitude_background)
+      |> draw_widget_frame(1, 0, "Altimeter", c, attitude_background)
+      |> draw_widget_frame(2, 0, "Vertical Speed", c, attitude_background)
       # Row 2
-      |> draw_widget_frame(0, 1, "Airspeed", c)
+      |> draw_widget_frame(0, 1, "Airspeed", c, attitude_background)
       |> maybe_draw_attitude_frame(1, 1, c, attitude_background)
-      |> draw_widget_frame(2, 1, "Heading", c)
+      |> draw_widget_frame(2, 1, "Heading", c, attitude_background)
       # Actual widgets - with simulate: false so we control them
-      |> add_tachometers(0, 0, flight_sim, c)
-      |> add_altimeter(1, 0, flight_sim)
-      |> add_vsi(2, 0, flight_sim)
+      # When attitude_background is true, instruments get transparent backgrounds
+      |> add_tachometers(0, 0, flight_sim, c, attitude_background)
+      |> add_altimeter(1, 0, flight_sim, attitude_background)
+      |> add_vsi(2, 0, flight_sim, attitude_background)
       |> maybe_add_attitude_widget(1, 1, flight_sim, attitude_background)
-      |> add_airspeed_indicator(0, 1, flight_sim)
-      |> add_heading_indicator(2, 1, flight_sim)
+      |> add_airspeed_indicator(0, 1, flight_sim, attitude_background)
+      |> add_heading_indicator(2, 1, flight_sim, attitude_background)
 
     # Start simulation tick
     Process.send_after(self(), :tick, @tick_interval)
@@ -119,8 +120,8 @@ defmodule ZfsMeter.Scene.Main do
   end
 
   # Attitude widget frame - only when not in background mode
-  defp maybe_draw_attitude_frame(graph, col, row, c, false) do
-    draw_widget_frame(graph, col, row, "Attitude", c)
+  defp maybe_draw_attitude_frame(graph, col, row, c, false = attitude_background) do
+    draw_widget_frame(graph, col, row, "Attitude", c, attitude_background)
   end
 
   defp maybe_draw_attitude_frame(graph, _col, _row, _c, true) do
@@ -140,16 +141,12 @@ defmodule ZfsMeter.Scene.Main do
     {col * @col_width, row * @row_height}
   end
 
-  defp draw_widget_frame(graph, col, row, title, c) do
+  defp draw_widget_frame(graph, col, row, title, c, transparent_bg) do
     {x, y} = cell_origin(col, row)
     padding = 15
 
     graph
-    |> rrect({@col_width - padding * 2, @row_height - padding * 2, 12},
-      fill: c.bg,
-      stroke: {2, c.tick},
-      translate: {x + padding, y + padding}
-    )
+    |> maybe_draw_frame_bg(x, y, padding, c, transparent_bg)
     |> text(title,
       fill: c.secondary,
       font_size: 28,
@@ -157,7 +154,24 @@ defmodule ZfsMeter.Scene.Main do
     )
   end
 
-  defp add_tachometers(graph, col, row, sim, c) do
+  defp maybe_draw_frame_bg(graph, x, y, padding, c, false) do
+    graph
+    |> rrect({@col_width - padding * 2, @row_height - padding * 2, 12},
+      fill: c.bg,
+      stroke: {2, c.tick},
+      translate: {x + padding, y + padding}
+    )
+  end
+
+  defp maybe_draw_frame_bg(graph, x, y, padding, c, true) do
+    graph
+    |> rrect({@col_width - padding * 2, @row_height - padding * 2, 12},
+      stroke: {2, c.tick},
+      translate: {x + padding, y + padding}
+    )
+  end
+
+  defp add_tachometers(graph, col, row, sim, c, transparent_bg) do
     {x, y} = cell_origin(col, row)
     cx = x + @col_width / 2
     cy = y + @row_height / 2 + 40
@@ -167,7 +181,8 @@ defmodule ZfsMeter.Scene.Main do
       {sim.left_rpm, sim.right_rpm, sim.left_oil_temp, sim.right_oil_temp},
       id: :engines_rpm,
       translate: {cx - 340, cy - 340},
-      simulate: false
+      simulate: false,
+      transparent_bg: transparent_bg
     )
     |> text("ENG 1",
       fill: c.primary,
@@ -183,7 +198,7 @@ defmodule ZfsMeter.Scene.Main do
     )
   end
 
-  defp add_altimeter(graph, col, row, sim) do
+  defp add_altimeter(graph, col, row, sim, transparent_bg) do
     {x, y} = cell_origin(col, row)
     cx = x + @col_width / 2
     cy = y + @row_height / 2 + 40
@@ -193,11 +208,12 @@ defmodule ZfsMeter.Scene.Main do
       sim.altitude,
       id: :altimeter,
       translate: {cx - 360, cy - 360},
-      simulate: false
+      simulate: false,
+      transparent_bg: transparent_bg
     )
   end
 
-  defp add_vsi(graph, col, row, sim) do
+  defp add_vsi(graph, col, row, sim, transparent_bg) do
     {x, y} = cell_origin(col, row)
     cx = x + @col_width / 2
     cy = y + @row_height / 2 + 40
@@ -207,7 +223,8 @@ defmodule ZfsMeter.Scene.Main do
       sim.vertical_speed,
       id: :vsi,
       translate: {cx - 360, cy - 360},
-      simulate: false
+      simulate: false,
+      transparent_bg: transparent_bg
     )
   end
 
@@ -226,7 +243,7 @@ defmodule ZfsMeter.Scene.Main do
     )
   end
 
-  defp add_airspeed_indicator(graph, col, row, sim) do
+  defp add_airspeed_indicator(graph, col, row, sim, transparent_bg) do
     {x, y} = cell_origin(col, row)
     cx = x + @col_width / 2
     cy = y + @row_height / 2 + 30
@@ -236,11 +253,12 @@ defmodule ZfsMeter.Scene.Main do
       sim.airspeed,
       id: :airspeed_indicator,
       translate: {cx - 330, cy - 330},
-      simulate: false
+      simulate: false,
+      transparent_bg: transparent_bg
     )
   end
 
-  defp add_heading_indicator(graph, col, row, sim) do
+  defp add_heading_indicator(graph, col, row, sim, transparent_bg) do
     {x, y} = cell_origin(col, row)
     cx = x + @col_width / 2
     cy = y + @row_height / 2 + 30
@@ -250,7 +268,8 @@ defmodule ZfsMeter.Scene.Main do
       sim.heading,
       id: :heading_indicator,
       translate: {cx - 330, cy - 330},
-      simulate: false
+      simulate: false,
+      transparent_bg: transparent_bg
     )
   end
 end

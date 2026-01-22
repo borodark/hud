@@ -27,22 +27,24 @@ defmodule ZfsMeter.Component.VSI do
   @impl Scenic.Scene
   def init(scene, rate, opts) do
     simulate = Keyword.get(opts, :simulate, true)
+    transparent_bg = Keyword.get(opts, :transparent_bg, false)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(rate)
+    graph = build_graph(rate, transparent_bg)
 
     scene
-    |> assign(rate: rate, target: rate, simulate: simulate)
+    |> assign(rate: rate, target: rate, simulate: simulate, transparent_bg: transparent_bg)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
   @impl Scenic.Scene
   def handle_put(rate, scene) when is_number(rate) do
-    graph = build_graph(rate)
+    %{transparent_bg: transparent_bg} = scene.assigns
+    graph = build_graph(rate, transparent_bg)
 
     scene
     |> assign(rate: rate)
@@ -56,7 +58,7 @@ defmodule ZfsMeter.Component.VSI do
   end
 
   def handle_info(:tick, scene) do
-    %{rate: current, target: target} = scene.assigns
+    %{rate: current, target: target, transparent_bg: transparent_bg} = scene.assigns
 
     target =
       if :rand.uniform() < 0.03 do
@@ -68,7 +70,7 @@ defmodule ZfsMeter.Component.VSI do
     diff = target - current
     new_rate = current + diff * 0.08
 
-    graph = build_graph(new_rate)
+    graph = build_graph(new_rate, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -78,29 +80,34 @@ defmodule ZfsMeter.Component.VSI do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(rate) do
+  defp build_graph(rate, transparent_bg) do
     c = ColorScheme.current()
 
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face(c)
+        |> draw_dial_face(c, transparent_bg)
         |> draw_tick_marks(c)
         |> draw_numbers(c)
         |> draw_labels(c)
         |> draw_readout(rate, c)
         |> draw_needle(rate, c)
-        |> draw_center_cap(c)
+        |> draw_center_cap(c, transparent_bg)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph, c) do
-    graph
-    |> circle(@radius, fill: c.bg, stroke: {8, c.border})
-    |> circle(@radius - 8, fill: c.bg)
+  defp draw_dial_face(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(@radius, stroke: {8, c.border})
+    else
+      graph
+      |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+      |> circle(@radius - 8, fill: c.bg)
+    end
   end
 
   defp draw_tick_marks(graph, c) do
@@ -239,10 +246,16 @@ defmodule ZfsMeter.Component.VSI do
     end)
   end
 
-  defp draw_center_cap(graph, c) do
-    graph
-    |> circle(35, fill: c.bg, stroke: {5, c.border})
-    |> circle(15, fill: c.border)
+  defp draw_center_cap(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(35, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    else
+      graph
+      |> circle(35, fill: c.bg, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    end
   end
 
   defp value_to_angle(value, :up) do

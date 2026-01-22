@@ -23,22 +23,24 @@ defmodule ZfsMeter.Component.HeadingIndicator do
   @impl Scenic.Scene
   def init(scene, heading, opts) do
     simulate = Keyword.get(opts, :simulate, true)
+    transparent_bg = Keyword.get(opts, :transparent_bg, false)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(heading)
+    graph = build_graph(heading, transparent_bg)
 
     scene
-    |> assign(heading: heading, target: heading, simulate: simulate)
+    |> assign(heading: heading, target: heading, simulate: simulate, transparent_bg: transparent_bg)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
   @impl Scenic.Scene
   def handle_put(heading, scene) when is_number(heading) do
-    graph = build_graph(heading)
+    %{transparent_bg: transparent_bg} = scene.assigns
+    graph = build_graph(heading, transparent_bg)
 
     scene
     |> assign(heading: heading)
@@ -52,7 +54,7 @@ defmodule ZfsMeter.Component.HeadingIndicator do
   end
 
   def handle_info(:tick, scene) do
-    %{heading: current, target: target} = scene.assigns
+    %{heading: current, target: target, transparent_bg: transparent_bg} = scene.assigns
 
     # Randomly adjust target occasionally
     target =
@@ -79,7 +81,7 @@ defmodule ZfsMeter.Component.HeadingIndicator do
       true -> new_heading
     end
 
-    graph = build_graph(new_heading)
+    graph = build_graph(new_heading, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -89,14 +91,14 @@ defmodule ZfsMeter.Component.HeadingIndicator do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(heading) do
+  defp build_graph(heading, transparent_bg) do
     c = ColorScheme.current()
 
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face(c)
+        |> draw_dial_face(c, transparent_bg)
         |> draw_compass_card(heading, c)
         |> draw_lubber_line(c)
         |> draw_aircraft_symbol(c)
@@ -106,10 +108,15 @@ defmodule ZfsMeter.Component.HeadingIndicator do
     )
   end
 
-  defp draw_dial_face(graph, c) do
-    graph
-    |> circle(@radius, fill: c.bg, stroke: {8, c.border})
-    |> circle(@radius - 8, fill: c.bg)
+  defp draw_dial_face(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(@radius, stroke: {8, c.border})
+    else
+      graph
+      |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+      |> circle(@radius - 8, fill: c.bg)
+    end
   end
 
   defp draw_compass_card(graph, heading, c) do

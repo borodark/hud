@@ -54,7 +54,7 @@ defmodule ZfsMeter.Component.Altimeter do
   end
 
   def handle_info(:tick, scene) do
-    %{altitude: current, target: target} = scene.assigns
+    %{altitude: current, target: target, transparent_bg: transparent_bg} = scene.assigns
 
     target =
       if :rand.uniform() < 0.02 do
@@ -66,7 +66,7 @@ defmodule ZfsMeter.Component.Altimeter do
     diff = target - current
     new_altitude = current + diff * 0.05
 
-    graph = build_graph(new_altitude)
+    graph = build_graph(new_altitude, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -76,28 +76,33 @@ defmodule ZfsMeter.Component.Altimeter do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(altitude) do
+  defp build_graph(altitude, transparent_bg) do
     c = ColorScheme.current()
 
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face(c)
+        |> draw_dial_face(c, transparent_bg)
         |> draw_tick_marks(c)
         |> draw_numbers(c)
         |> draw_readout(altitude, c)
         |> draw_needles(altitude, c)
-        |> draw_center_cap(c)
+        |> draw_center_cap(c, transparent_bg)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph, c) do
-    graph
-    |> circle(@radius, fill: c.bg, stroke: {8, c.border})
-    |> circle(@radius - 8, fill: c.bg)
+  defp draw_dial_face(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(@radius, stroke: {8, c.border})
+    else
+      graph
+      |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+      |> circle(@radius - 8, fill: c.bg)
+    end
   end
 
   defp draw_tick_marks(graph, c) do
@@ -226,9 +231,15 @@ defmodule ZfsMeter.Component.Altimeter do
     )
   end
 
-  defp draw_center_cap(graph, c) do
-    graph
-    |> circle(35, fill: c.bg, stroke: {5, c.border})
-    |> circle(15, fill: c.border)
+  defp draw_center_cap(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(35, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    else
+      graph
+      |> circle(35, fill: c.bg, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    end
   end
 end

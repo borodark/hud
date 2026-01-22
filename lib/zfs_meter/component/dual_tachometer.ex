@@ -38,12 +38,13 @@ defmodule ZfsMeter.Component.DualTachometer do
   @impl Scenic.Scene
   def init(scene, {left_rpm, right_rpm, left_oil, right_oil}, opts) do
     simulate = Keyword.get(opts, :simulate, true)
+    transparent_bg = Keyword.get(opts, :transparent_bg, false)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil)
+    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil, transparent_bg)
 
     scene
     |> assign(
@@ -53,7 +54,8 @@ defmodule ZfsMeter.Component.DualTachometer do
       right_target: right_rpm,
       left_oil: left_oil,
       right_oil: right_oil,
-      simulate: simulate
+      simulate: simulate,
+      transparent_bg: transparent_bg
     )
     |> push_graph(graph)
     |> then(&{:ok, &1})
@@ -62,7 +64,8 @@ defmodule ZfsMeter.Component.DualTachometer do
   # Handle external updates from parent scene
   @impl Scenic.Scene
   def handle_put({left_rpm, right_rpm, left_oil, right_oil}, scene) do
-    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil)
+    %{transparent_bg: transparent_bg} = scene.assigns
+    graph = build_graph(left_rpm, right_rpm, left_oil, right_oil, transparent_bg)
 
     scene
     |> assign(left_rpm: left_rpm, right_rpm: right_rpm, left_oil: left_oil, right_oil: right_oil)
@@ -80,7 +83,8 @@ defmodule ZfsMeter.Component.DualTachometer do
       left_rpm: left_current,
       right_rpm: right_current,
       left_target: left_target,
-      right_target: right_target
+      right_target: right_target,
+      transparent_bg: transparent_bg
     } = scene.assigns
 
     # Simulate RPM changes for both engines
@@ -106,7 +110,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     left_oil_sim = 50 + left_rpm / @max_rpm * 60
     right_oil_sim = 50 + right_rpm / @max_rpm * 60
 
-    graph = build_graph(left_rpm, right_rpm, left_oil_sim, right_oil_sim)
+    graph = build_graph(left_rpm, right_rpm, left_oil_sim, right_oil_sim, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -123,7 +127,7 @@ defmodule ZfsMeter.Component.DualTachometer do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(left_rpm, right_rpm, left_oil, right_oil) do
+  defp build_graph(left_rpm, right_rpm, left_oil, right_oil, transparent_bg) do
     c = ColorScheme.current()
 
     Graph.build()
@@ -131,8 +135,8 @@ defmodule ZfsMeter.Component.DualTachometer do
       fn g ->
         g
         # Draw both dial faces first (backgrounds)
-        |> draw_dial_face(:left, c)
-        |> draw_dial_face(:right, c)
+        |> draw_dial_face(:left, c, transparent_bg)
+        |> draw_dial_face(:right, c, transparent_bg)
         # Then colored arcs for both
         |> draw_colored_arcs(:left, c)
         |> draw_colored_arcs(:right, c)
@@ -152,13 +156,13 @@ defmodule ZfsMeter.Component.DualTachometer do
         |> draw_needle(left_rpm, :left, c)
         |> draw_needle(right_rpm, :right, c)
         # Single shared center cap (drawn last, on top)
-        |> draw_center_cap(c)
+        |> draw_center_cap(c, transparent_bg)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  defp draw_dial_face(graph, side, c) do
+  defp draw_dial_face(graph, side, c, transparent_bg) do
     {start, sweep} =
       case side do
         # Bottom to top, curving left
@@ -167,16 +171,24 @@ defmodule ZfsMeter.Component.DualTachometer do
         :right -> {-:math.pi() / 2, @sweep_angle}
       end
 
-    graph
-    |> sector({@radius, sweep},
-      fill: c.bg,
-      stroke: {6, c.border},
-      rotate: start
-    )
-    |> sector({@radius - 6, sweep},
-      fill: c.bg,
-      rotate: start
-    )
+    if transparent_bg do
+      graph
+      |> sector({@radius, sweep},
+        stroke: {6, c.border},
+        rotate: start
+      )
+    else
+      graph
+      |> sector({@radius, sweep},
+        fill: c.bg,
+        stroke: {6, c.border},
+        rotate: start
+      )
+      |> sector({@radius - 6, sweep},
+        fill: c.bg,
+        rotate: start
+      )
+    end
   end
 
   defp draw_colored_arcs(graph, side, c) do
@@ -381,10 +393,16 @@ defmodule ZfsMeter.Component.DualTachometer do
     end)
   end
 
-  defp draw_center_cap(graph, c) do
-    graph
-    |> circle(28, fill: c.bg, stroke: {4, c.border})
-    |> circle(12, fill: c.border)
+  defp draw_center_cap(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(28, stroke: {4, c.border})
+      |> circle(12, fill: c.border)
+    else
+      graph
+      |> circle(28, fill: c.bg, stroke: {4, c.border})
+      |> circle(12, fill: c.border)
+    end
   end
 
   # Convert RPM to angle
