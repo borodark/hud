@@ -32,7 +32,12 @@ defmodule ZfsMeter.Component.HeadingIndicator do
     graph = build_graph(heading, transparent_bg)
 
     scene
-    |> assign(heading: heading, target: heading, simulate: simulate, transparent_bg: transparent_bg)
+    |> assign(
+      heading: heading,
+      target: heading,
+      simulate: simulate,
+      transparent_bg: transparent_bg
+    )
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
@@ -66,20 +71,23 @@ defmodule ZfsMeter.Component.HeadingIndicator do
 
     # Smoothly turn toward target (shortest path)
     diff = target - current
-    diff = cond do
-      diff > 180 -> diff - 360
-      diff < -180 -> diff + 360
-      true -> diff
-    end
+
+    diff =
+      cond do
+        diff > 180 -> diff - 360
+        diff < -180 -> diff + 360
+        true -> diff
+      end
 
     new_heading = current + diff * 0.05
 
     # Normalize
-    new_heading = cond do
-      new_heading >= 360 -> new_heading - 360
-      new_heading < 0 -> new_heading + 360
-      true -> new_heading
-    end
+    new_heading =
+      cond do
+        new_heading >= 360 -> new_heading - 360
+        new_heading < 0 -> new_heading + 360
+        true -> new_heading
+      end
 
     graph = build_graph(new_heading, transparent_bg)
 
@@ -142,10 +150,11 @@ defmodule ZfsMeter.Component.HeadingIndicator do
       angle_rad = angle_deg * :math.pi() / 180
 
       # Every 30° gets longest tick, every 10° medium, every 5° short
-      {length, width} = cond do
-        rem(angle_deg, 30) == 0 -> {40, 4}
-        true -> {25, 2}
-      end
+      {length, width} =
+        cond do
+          rem(angle_deg, 30) == 0 -> {40, 4}
+          true -> {25, 2}
+        end
 
       inner = @radius - 20 - length
       outer = @radius - 20
@@ -162,9 +171,18 @@ defmodule ZfsMeter.Component.HeadingIndicator do
   defp draw_degree_numbers(graph, c) do
     # Draw numbers every 30 degrees (showing as 3, 6, 9, etc. or N, E, S, W)
     numbers = [
-      {0, "N"}, {30, "3"}, {60, "6"}, {90, "E"},
-      {120, "12"}, {150, "15"}, {180, "S"}, {210, "21"},
-      {240, "24"}, {270, "W"}, {300, "30"}, {330, "33"}
+      {0, "N"},
+      {30, "3"},
+      {60, "6"},
+      {90, "E"},
+      {120, "12"},
+      {150, "15"},
+      {180, "S"},
+      {210, "21"},
+      {240, "24"},
+      {270, "W"},
+      {300, "30"},
+      {330, "33"}
     ]
 
     Enum.reduce(numbers, graph, fn {angle_deg, label}, g ->
@@ -268,14 +286,23 @@ defmodule ZfsMeter.Component.HeadingIndicator do
 
     # Format with leading zeros
     padded = value |> Integer.to_string() |> String.pad_leading(3, "0")
-    display = padded <> "°"
+
+    # Heading box between 21/33 marks, at start of aircraft symbol
+    box_width = 90
+    box_height = 44
+    box_y = -115
 
     graph
-    |> text(display,
+    |> rrect({box_width, box_height, 6},
+      fill: {0, 0, 0, 180},
+      stroke: {2, c.border},
+      translate: {-box_width / 2, box_y - box_height / 2}
+    )
+    |> text(padded,
       fill: c.primary,
-      font_size: 42,
+      font_size: 36,
       text_align: :center,
-      translate: {0, @radius - 60}
+      translate: {0, box_y + 12}
     )
   end
 end

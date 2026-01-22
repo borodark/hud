@@ -45,7 +45,12 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
     graph = build_graph(airspeed, transparent_bg)
 
     scene
-    |> assign(airspeed: airspeed, target: airspeed, simulate: simulate, transparent_bg: transparent_bg)
+    |> assign(
+      airspeed: airspeed,
+      target: airspeed,
+      simulate: simulate,
+      transparent_bg: transparent_bg
+    )
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
@@ -277,8 +282,7 @@ defmodule ZfsMeter.Component.AirspeedIndicator do
     )
     |> line(
       {{0, 0},
-       {:math.cos(angle + :math.pi()) * tail_length,
-        :math.sin(angle + :math.pi()) * tail_length}},
+       {:math.cos(angle + :math.pi()) * tail_length, :math.sin(angle + :math.pi()) * tail_length}},
       stroke: {8, c.needle},
       cap: :round
     )

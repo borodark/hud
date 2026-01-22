@@ -29,33 +29,52 @@ defmodule ZfsMeter.ColorScheme do
     %{
       # Base colors - warm amber/orange/red spectrum
       bg: {0, 0, 0},
-      primary: {255, 180, 0},        # Amber - main text/numbers
-      secondary: {255, 140, 0},      # Orange - secondary elements
-      accent: {255, 220, 0},         # Yellow - highlights
-      border: {255, 100, 0},         # Deep orange - borders
-      tick: {255, 30, 0},            # Warm red - tick marks
-      needle: {255, 140, 0},         # Orange - needles
-      warning: {255, 220, 0},        # Yellow - warnings
-      critical: {255, 0, 0},         # Red - critical
+      # Amber - main text/numbers
+      primary: {255, 180, 0},
+      # Orange - secondary elements
+      secondary: {255, 140, 0},
+      # Yellow - highlights
+      accent: {255, 220, 0},
+      # Deep orange - borders
+      border: {255, 100, 0},
+      # Warm red - tick marks
+      tick: {255, 30, 0},
+      # Orange - needles
+      needle: {255, 140, 0},
+      # Yellow - warnings
+      warning: {255, 220, 0},
+      # Red - critical
+      critical: {255, 0, 0},
 
       # Semantic colors
-      positive: {255, 220, 0},       # Yellow - climb/positive
-      negative: {255, 0, 0},         # Red - descent/negative
+      # Yellow - climb/positive
+      positive: {255, 220, 0},
+      # Red - descent/negative
+      negative: {255, 0, 0},
 
       # Gauge-specific
-      arc_white: {255, 200, 150},    # Warm white for arcs
-      arc_green: {200, 180, 0},      # Yellow-green
-      arc_yellow: {255, 180, 0},     # Amber
-      arc_red: {255, 0, 0},          # Red
+      # Warm white for arcs
+      arc_white: {255, 200, 150},
+      # Yellow-green
+      arc_green: {200, 180, 0},
+      # Amber
+      arc_yellow: {255, 180, 0},
+      # Red
+      arc_red: {255, 0, 0},
 
       # Attitude indicator (traditional for realism)
-      sky: {30, 60, 130},            # Dark blue
-      ground: {140, 90, 50},         # Brown
-      horizon: {255, 220, 0},        # Yellow
+      # Dark blue
+      sky: {30, 60, 130},
+      # Brown
+      ground: {140, 90, 50},
+      # Yellow
+      horizon: {255, 220, 0},
 
       # Heading indicator
-      cardinal: {255, 220, 0},       # Yellow for N
-      aircraft: {255, 140, 0}        # Orange
+      # Yellow for N
+      cardinal: {255, 220, 0},
+      # Orange
+      aircraft: {255, 140, 0}
     }
   end
 
@@ -63,33 +82,52 @@ defmodule ZfsMeter.ColorScheme do
     %{
       # Base colors - high contrast white/cyan for sunlight
       bg: {0, 0, 0},
-      primary: {255, 255, 255},      # Pure white - main text/numbers
-      secondary: {0, 255, 255},      # Cyan - secondary elements
-      accent: {0, 255, 128},         # Bright green - highlights
-      border: {255, 255, 255},       # White - borders
-      tick: {0, 255, 255},           # Cyan - tick marks
-      needle: {255, 255, 255},       # White - needles
-      warning: {255, 255, 0},        # Bright yellow - warnings
-      critical: {255, 0, 128},       # Magenta - critical (visible in sun)
+      # Pure white - main text/numbers
+      primary: {255, 255, 255},
+      # Cyan - secondary elements
+      secondary: {0, 255, 255},
+      # Bright green - highlights
+      accent: {0, 255, 128},
+      # White - borders
+      border: {255, 255, 255},
+      # Cyan - tick marks
+      tick: {0, 255, 255},
+      # White - needles
+      needle: {255, 255, 255},
+      # Bright yellow - warnings
+      warning: {255, 255, 0},
+      # Magenta - critical (visible in sun)
+      critical: {255, 0, 128},
 
       # Semantic colors
-      positive: {0, 255, 128},       # Bright green - climb/positive
-      negative: {255, 0, 128},       # Magenta - descent/negative
+      # Bright green - climb/positive
+      positive: {0, 255, 128},
+      # Magenta - descent/negative
+      negative: {255, 0, 128},
 
       # Gauge-specific
-      arc_white: {255, 255, 255},    # Pure white for arcs
-      arc_green: {0, 255, 100},      # Bright green
-      arc_yellow: {255, 255, 0},     # Bright yellow
-      arc_red: {255, 0, 128},        # Magenta (more visible than red)
+      # Pure white for arcs
+      arc_white: {255, 255, 255},
+      # Bright green
+      arc_green: {0, 255, 100},
+      # Bright yellow
+      arc_yellow: {255, 255, 0},
+      # Magenta (more visible than red)
+      arc_red: {255, 0, 128},
 
       # Attitude indicator
-      sky: {0, 100, 200},            # Brighter blue
-      ground: {139, 90, 43},         # Sienna brown
-      horizon: {255, 255, 255},      # White
+      # Brighter blue
+      sky: {0, 100, 200},
+      # Sienna brown
+      ground: {139, 90, 43},
+      # White
+      horizon: {255, 255, 255},
 
       # Heading indicator
-      cardinal: {0, 255, 128},       # Bright green for N
-      aircraft: {255, 255, 255}      # White
+      # Bright green for N
+      cardinal: {0, 255, 128},
+      # White
+      aircraft: {255, 255, 255}
     }
   end
 

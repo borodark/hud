@@ -33,11 +33,15 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
   @pixels_per_degree 12
 
   @impl Scenic.Component
-  def validate({pitch, roll}) when is_number(pitch) and is_number(roll), do: {:ok, {pitch, roll}}
-  def validate(_), do: {:error, "Expected {pitch, roll} tuple with numeric values"}
+  def validate({pitch, roll, heading})
+      when is_number(pitch) and is_number(roll) and is_number(heading) do
+    {:ok, {pitch, roll, heading}}
+  end
+
+  def validate(_), do: {:error, "Expected {pitch, roll, heading} tuple with numeric values"}
 
   @impl Scenic.Scene
-  def init(scene, {pitch, roll}, opts) do
+  def init(scene, {pitch, roll, heading}, opts) do
     simulate = Keyword.get(opts, :simulate, true)
     width = Keyword.get(opts, :width, @default_width)
     height = Keyword.get(opts, :height, @default_height)
@@ -61,21 +65,22 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
       background_mode: background_mode
     }
 
-    graph = build_graph(pitch, roll, config)
+    graph = build_graph(pitch, roll, heading, config)
 
     scene
-    |> assign(pitch: pitch, roll: roll, simulate: simulate, config: config)
+    |> assign(pitch: pitch, roll: roll, heading: heading, simulate: simulate, config: config)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
   @impl Scenic.Scene
-  def handle_put({pitch, roll}, scene) when is_number(pitch) and is_number(roll) do
+  def handle_put({pitch, roll, heading}, scene)
+      when is_number(pitch) and is_number(roll) and is_number(heading) do
     %{config: config} = scene.assigns
-    graph = build_graph(pitch, roll, config)
+    graph = build_graph(pitch, roll, heading, config)
 
     scene
-    |> assign(pitch: pitch, roll: roll)
+    |> assign(pitch: pitch, roll: roll, heading: heading)
     |> push_graph(graph)
     |> then(&{:noreply, &1})
   end
@@ -86,23 +91,24 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
   end
 
   def handle_info(:tick, scene) do
-    %{pitch: pitch, roll: roll, config: config} = scene.assigns
+    %{pitch: pitch, roll: roll, heading: heading, config: config} = scene.assigns
 
     # Random gentle movement for simulation
     new_pitch = pitch + (:rand.uniform() - 0.5) * 0.5
     new_roll = roll + (:rand.uniform() - 0.5) * 0.5
+    new_heading = rem(trunc(heading + (:rand.uniform() - 0.5) * 2 + 360), 360)
 
-    graph = build_graph(new_pitch, new_roll, config)
+    graph = build_graph(new_pitch, new_roll, new_heading, config)
 
     Process.send_after(self(), :tick, @update_interval)
 
     scene
-    |> assign(pitch: new_pitch, roll: new_roll)
+    |> assign(pitch: new_pitch, roll: new_roll, heading: new_heading)
     |> push_graph(graph)
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(pitch, roll, config) do
+  defp build_graph(pitch, roll, heading, config) do
     c = ColorScheme.current()
 
     Graph.build()
@@ -114,6 +120,7 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
         |> maybe_draw_bank_scale(c, config)
         |> maybe_draw_bank_pointer(roll, c, config)
         |> maybe_draw_aircraft_symbol(c, config)
+        |> draw_heading_display(heading, c, config)
         |> maybe_draw_border(c, config)
       end,
       scissor: {config.width, config.height}
@@ -140,7 +147,8 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
   defp draw_sky_ground(graph, y_offset, c, config) do
     # Large rectangles for sky and ground that extend beyond visible area
     # This ensures full coverage when rotated
-    size = config.width + config.height  # Diagonal coverage
+    # Diagonal coverage
+    size = config.width + config.height
 
     graph
     # Sky - extends upward from horizon
@@ -173,7 +181,8 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
 
   defp draw_pitch_ladder(graph, pitch, c, config) do
     y_offset = pitch * @pixels_per_degree
-    roll_rad = 0  # Pitch ladder rotates with horizon in actual use
+    # Pitch ladder rotates with horizon in actual use
+    roll_rad = 0
     pitch_marks = [-30, -25, -20, -15, -10, -5, 5, 10, 15, 20, 25, 30]
 
     # Draw pitch ladder centered and rotated
@@ -184,11 +193,12 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
           mark_y = y_offset - mark * @pixels_per_degree
 
           # Line width varies: longer for 10-degree marks
-          {half_width, show_label} = cond do
-            rem(abs(mark), 10) == 0 -> {80, true}
-            rem(abs(mark), 5) == 0 -> {40, false}
-            true -> {25, false}
-          end
+          {half_width, show_label} =
+            cond do
+              rem(abs(mark), 10) == 0 -> {80, true}
+              rem(abs(mark), 5) == 0 -> {40, false}
+              true -> {25, false}
+            end
 
           # Draw pitch line
           gr
@@ -252,6 +262,7 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
   defp draw_bank_scale(graph, c, config) do
     # Bank marks at top of display, centered
     bank_radius = min(config.width, config.height) / 2 - 100
+
     bank_marks = [
       {0, :major},
       {10, :minor},
@@ -365,6 +376,39 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
     )
     # Center dot
     |> circle(8, fill: c.aircraft, translate: {cx, cy})
+  end
+
+  defp draw_heading_display(graph, heading, c, config) do
+    if config.background_mode do
+      graph
+    else
+      # Heading display at 12 o'clock from aircraft symbol
+      cx = config.center_x
+      # Position above the bank scale
+      top_y = 45
+
+      # Format heading with leading zeros
+      hdg_value = round(heading)
+      hdg_value = if hdg_value == 0, do: 360, else: hdg_value
+      hdg_text = hdg_value |> Integer.to_string() |> String.pad_leading(3, "0")
+
+      # Draw heading box background
+      box_width = 80
+      box_height = 40
+
+      graph
+      |> rrect({box_width, box_height, 6},
+        fill: {0, 0, 0, 180},
+        stroke: {2, c.border},
+        translate: {cx - box_width / 2, top_y - box_height / 2}
+      )
+      |> text(hdg_text,
+        fill: c.primary,
+        font_size: 32,
+        text_align: :center,
+        translate: {cx, top_y + 10}
+      )
+    end
   end
 
   defp maybe_draw_border(graph, c, config) do

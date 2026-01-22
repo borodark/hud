@@ -333,13 +333,20 @@ defmodule ZfsMeter.Component.DualTachometer do
 
     # Bar colors: use scheme colors in a gradient
     bar_colors = [
-      c.accent,      # Bar 1 - cold
-      c.primary,     # Bar 2
-      c.secondary,   # Bar 3 - optimal
-      c.needle,      # Bar 4 - optimal
-      c.warning,     # Bar 5
-      c.tick,        # Bar 6
-      c.critical     # Bar 7 - hot
+      # Bar 1 - cold
+      c.accent,
+      # Bar 2
+      c.primary,
+      # Bar 3 - optimal
+      c.secondary,
+      # Bar 4 - optimal
+      c.needle,
+      # Bar 5
+      c.warning,
+      # Bar 6
+      c.tick,
+      # Bar 7 - hot
+      c.critical
     ]
 
     # Dim versions of colors for inactive bars

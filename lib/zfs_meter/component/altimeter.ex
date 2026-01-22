@@ -32,7 +32,12 @@ defmodule ZfsMeter.Component.Altimeter do
     graph = build_graph(altitude, transparent_bg)
 
     scene
-    |> assign(altitude: altitude, target: altitude, simulate: simulate, transparent_bg: transparent_bg)
+    |> assign(
+      altitude: altitude,
+      target: altitude,
+      simulate: simulate,
+      transparent_bg: transparent_bg
+    )
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end

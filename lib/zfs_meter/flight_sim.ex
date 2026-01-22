@@ -325,11 +325,13 @@ defmodule ZfsMeter.FlightSim do
 
     # Calculate shortest turn direction
     diff = target_heading - sim.heading
-    diff = cond do
-      diff > 180 -> diff - 360
-      diff < -180 -> diff + 360
-      true -> diff
-    end
+
+    diff =
+      cond do
+        diff > 180 -> diff - 360
+        diff < -180 -> diff + 360
+        true -> diff
+      end
 
     # Turn rate depends on phase (degrees per second)
     turn_rate =
@@ -345,11 +347,12 @@ defmodule ZfsMeter.FlightSim do
     new_heading = sim.heading + heading_change
 
     # Normalize to 0-360
-    new_heading = cond do
-      new_heading >= 360 -> new_heading - 360
-      new_heading < 0 -> new_heading + 360
-      true -> new_heading
-    end
+    new_heading =
+      cond do
+        new_heading >= 360 -> new_heading - 360
+        new_heading < 0 -> new_heading + 360
+        true -> new_heading
+      end
 
     %{sim | heading: new_heading, target_heading: target_heading}
   end

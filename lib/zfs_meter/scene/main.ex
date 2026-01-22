@@ -84,9 +84,9 @@ defmodule ZfsMeter.Scene.Main do
 
     # Update attitude indicator (either background or widget)
     if attitude_background do
-      :ok = put_child(scene, :attitude_background, {new_sim.pitch, new_sim.roll})
+      :ok = put_child(scene, :attitude_background, {new_sim.pitch, new_sim.roll, new_sim.heading})
     else
-      :ok = put_child(scene, :attitude_indicator, {new_sim.pitch, new_sim.roll})
+      :ok = put_child(scene, :attitude_indicator, {new_sim.pitch, new_sim.roll, new_sim.heading})
     end
 
     # Schedule next tick
@@ -101,7 +101,7 @@ defmodule ZfsMeter.Scene.Main do
   defp maybe_add_attitude_background(graph, flight_sim, true) do
     graph
     |> AttitudeIndicator.add_to_graph(
-      {flight_sim.pitch, flight_sim.roll},
+      {flight_sim.pitch, flight_sim.roll, flight_sim.heading},
       id: :attitude_background,
       width: @screen_width,
       height: @screen_height,
@@ -236,7 +236,7 @@ defmodule ZfsMeter.Scene.Main do
 
     graph
     |> AttitudeIndicator.add_to_graph(
-      {sim.pitch, sim.roll},
+      {sim.pitch, sim.roll, sim.heading},
       id: :attitude_indicator,
       translate: {x + offset_x, y + offset_y},
       simulate: false
