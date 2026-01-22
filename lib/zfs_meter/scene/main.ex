@@ -230,9 +230,9 @@ defmodule ZfsMeter.Scene.Main do
 
   defp add_attitude_indicator(graph, col, row, sim) do
     {x, y} = cell_origin(col, row)
-    # Rectangular attitude indicator: 760x780, center in widget
+    # Rectangular attitude indicator: 760x780, centered in widget
     offset_x = (@col_width - 760) / 2
-    offset_y = (@row_height - 780) / 2 + 20
+    offset_y = (@row_height - 780) / 2
 
     graph
     |> AttitudeIndicator.add_to_graph(

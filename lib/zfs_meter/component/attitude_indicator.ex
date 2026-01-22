@@ -54,7 +54,7 @@ defmodule ZfsMeter.Component.AttitudeIndicator do
       width: width,
       height: height,
       center_x: width / 2,
-      center_y: height / 2 + 20,
+      center_y: height / 2,
       show_border: show_border,
       show_bank_scale: show_bank_scale,
       show_aircraft: show_aircraft,
