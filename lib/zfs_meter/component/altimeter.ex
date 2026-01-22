@@ -10,31 +10,11 @@ defmodule ZfsMeter.Component.Altimeter do
   use Scenic.Component, has_children: false
 
   alias Scenic.Graph
+  alias ZfsMeter.ColorScheme
   import Scenic.Primitives
 
   @radius 340
   @update_interval 50
-
-  # OLED color palette (yellow -> red spectrum + black)
-  @color_black {0, 0, 0}
-  @color_yellow {255, 220, 0}
-  @color_amber {255, 180, 0}
-  @color_orange {255, 140, 0}
-  @color_deep_orange {255, 100, 0}
-  @color_red_orange {255, 60, 0}
-  @color_warm_red {255, 30, 0}
-  @color_red {255, 0, 0}
-
-  # Semantic aliases
-  @color_bg @color_black
-  @color_dial @color_black
-  @color_border @color_deep_orange
-  @color_text @color_amber
-  @color_tick @color_warm_red
-  @color_tick_minor @color_red_orange
-  @color_needle_long @color_amber
-  @color_needle_medium @color_orange
-  @color_needle_short @color_red_orange
 
   @impl Scenic.Component
   def validate(altitude) when is_number(altitude), do: {:ok, altitude}
@@ -43,23 +23,24 @@ defmodule ZfsMeter.Component.Altimeter do
   @impl Scenic.Scene
   def init(scene, altitude, opts) do
     simulate = Keyword.get(opts, :simulate, true)
+    transparent_bg = Keyword.get(opts, :transparent_bg, false)
 
     if simulate do
       Process.send_after(self(), :tick, @update_interval)
     end
 
-    graph = build_graph(altitude)
+    graph = build_graph(altitude, transparent_bg)
 
     scene
-    |> assign(altitude: altitude, target: altitude, simulate: simulate)
+    |> assign(altitude: altitude, target: altitude, simulate: simulate, transparent_bg: transparent_bg)
     |> push_graph(graph)
     |> then(&{:ok, &1})
   end
 
-  # Handle external updates from parent scene
   @impl Scenic.Scene
   def handle_put(altitude, scene) when is_number(altitude) do
-    graph = build_graph(altitude)
+    %{transparent_bg: transparent_bg} = scene.assigns
+    graph = build_graph(altitude, transparent_bg)
 
     scene
     |> assign(altitude: altitude)
@@ -73,10 +54,8 @@ defmodule ZfsMeter.Component.Altimeter do
   end
 
   def handle_info(:tick, scene) do
-    # Simulate altitude changes for demo
-    %{altitude: current, target: target} = scene.assigns
+    %{altitude: current, target: target, transparent_bg: transparent_bg} = scene.assigns
 
-    # Randomly adjust target occasionally
     target =
       if :rand.uniform() < 0.02 do
         max(0, min(45000, target + (:rand.uniform() - 0.5) * 5000))
@@ -84,11 +63,10 @@ defmodule ZfsMeter.Component.Altimeter do
         target
       end
 
-    # Smoothly move toward target
     diff = target - current
     new_altitude = current + diff * 0.05
 
-    graph = build_graph(new_altitude)
+    graph = build_graph(new_altitude, transparent_bg)
 
     Process.send_after(self(), :tick, @update_interval)
 
@@ -98,37 +76,42 @@ defmodule ZfsMeter.Component.Altimeter do
     |> then(&{:noreply, &1})
   end
 
-  defp build_graph(altitude) do
+  defp build_graph(altitude, transparent_bg) do
+    c = ColorScheme.current()
+
     Graph.build()
     |> group(
       fn g ->
         g
-        |> draw_dial_face()
-        |> draw_tick_marks()
-        |> draw_numbers()
-        |> draw_readout(altitude)
-        |> draw_needles(altitude)
-        |> draw_center_cap()
+        |> draw_dial_face(c, transparent_bg)
+        |> draw_tick_marks(c)
+        |> draw_numbers(c)
+        |> draw_readout(altitude, c)
+        |> draw_needles(altitude, c)
+        |> draw_center_cap(c, transparent_bg)
       end,
       translate: {@radius + 20, @radius + 20}
     )
   end
 
-  # Black dial face with amber border
-  defp draw_dial_face(graph) do
-    graph
-    |> circle(@radius, fill: @color_bg, stroke: {8, @color_border})
-    |> circle(@radius - 8, fill: @color_dial)
+  defp draw_dial_face(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(@radius, stroke: {8, c.border})
+    else
+      graph
+      |> circle(@radius, fill: c.bg, stroke: {8, c.border})
+      |> circle(@radius - 8, fill: c.bg)
+    end
   end
 
-  # Major ticks (at each number) and minor ticks
-  defp draw_tick_marks(graph) do
+  defp draw_tick_marks(graph, c) do
     graph
-    |> draw_major_ticks()
-    |> draw_minor_ticks()
+    |> draw_major_ticks(c)
+    |> draw_minor_ticks(c)
   end
 
-  defp draw_major_ticks(graph) do
+  defp draw_major_ticks(graph, c) do
     Enum.reduce(0..9, graph, fn i, g ->
       angle = i * (:math.pi() * 2 / 10) - :math.pi() / 2
       inner = @radius - 60
@@ -139,13 +122,12 @@ defmodule ZfsMeter.Component.Altimeter do
       x2 = :math.cos(angle) * outer
       y2 = :math.sin(angle) * outer
 
-      g |> line({{x1, y1}, {x2, y2}}, stroke: {8, @color_tick}, cap: :round)
+      g |> line({{x1, y1}, {x2, y2}}, stroke: {8, c.tick}, cap: :round)
     end)
   end
 
-  defp draw_minor_ticks(graph) do
+  defp draw_minor_ticks(graph, c) do
     Enum.reduce(0..49, graph, fn i, g ->
-      # Skip positions where major ticks are
       if rem(i, 5) == 0 do
         g
       else
@@ -158,13 +140,12 @@ defmodule ZfsMeter.Component.Altimeter do
         x2 = :math.cos(angle) * outer
         y2 = :math.sin(angle) * outer
 
-        g |> line({{x1, y1}, {x2, y2}}, stroke: {3, @color_tick_minor})
+        g |> line({{x1, y1}, {x2, y2}}, stroke: {3, c.secondary})
       end
     end)
   end
 
-  # Numbers 0-9 around dial
-  defp draw_numbers(graph) do
+  defp draw_numbers(graph, c) do
     Enum.reduce(0..9, graph, fn i, g ->
       angle = i * (:math.pi() * 2 / 10) - :math.pi() / 2
       dist = @radius - 100
@@ -174,7 +155,7 @@ defmodule ZfsMeter.Component.Altimeter do
       g
       |> text(
         "#{i}",
-        fill: @color_text,
+        fill: c.primary,
         font_size: 56,
         text_align: :center,
         translate: {x, y + 20}
@@ -182,92 +163,83 @@ defmodule ZfsMeter.Component.Altimeter do
     end)
   end
 
-  # Numeric altitude readout in meters at 6 o'clock
-  defp draw_readout(graph, altitude) do
-    # Convert feet to meters
+  defp draw_readout(graph, altitude, c) do
     meters = trunc(altitude * 0.3048)
     display = "#{meters} m"
 
     graph
     |> text(display,
-      fill: @color_text,
+      fill: c.primary,
       font_size: 36,
       text_align: :center,
       translate: {0, 180}
     )
   end
 
-  # Three needles for 100s, 1000s, 10000s
-  defp draw_needles(graph, altitude) do
+  defp draw_needles(graph, altitude, c) do
     altitude = max(0.0, altitude / 1.0)
 
-    # Calculate rotations
-    # Long hand: full circle = 1000 ft
     hundreds_angle = :math.fmod(altitude, 1000) / 1000 * :math.pi() * 2
-    # Medium hand: full circle = 10,000 ft
     thousands_angle = :math.fmod(altitude, 10000) / 10000 * :math.pi() * 2
-    # Short hand: full circle = 100,000 ft
     ten_thousands_angle = altitude / 100_000 * :math.pi() * 2
 
     graph
-    # Long needle (100s of feet) - thin and long
-    |> draw_long_needle(hundreds_angle)
-    # Medium needle (1000s) - medium length
-    |> draw_medium_needle(thousands_angle)
-    # Short needle (10,000s) - short with triangle tip
-    |> draw_short_needle(ten_thousands_angle)
+    |> draw_long_needle(hundreds_angle, c)
+    |> draw_medium_needle(thousands_angle, c)
+    |> draw_short_needle(ten_thousands_angle, c)
   end
 
-  defp draw_long_needle(graph, angle) do
-    rotation = angle
+  defp draw_long_needle(graph, angle, c) do
     length = @radius - 50
 
     graph
     |> group(
       fn g ->
         g
-        |> line({{0, 25}, {0, -length}}, stroke: {6, @color_needle_long}, cap: :round)
+        |> line({{0, 25}, {0, -length}}, stroke: {6, c.primary}, cap: :round)
       end,
-      rotate: rotation
+      rotate: angle
     )
   end
 
-  defp draw_medium_needle(graph, angle) do
-    rotation = angle
+  defp draw_medium_needle(graph, angle, c) do
     length = @radius - 120
 
     graph
     |> group(
       fn g ->
         g
-        |> line({{0, 40}, {0, -length}}, stroke: {12, @color_needle_medium}, cap: :round)
+        |> line({{0, 40}, {0, -length}}, stroke: {12, c.secondary}, cap: :round)
       end,
-      rotate: rotation
+      rotate: angle
     )
   end
 
-  defp draw_short_needle(graph, angle) do
-    rotation = angle
+  defp draw_short_needle(graph, angle, c) do
     length = @radius - 180
 
     graph
     |> group(
       fn g ->
         g
-        # Triangle pointer
         |> triangle({{0, -length}, {-18, -length + 60}, {18, -length + 60}},
-          fill: @color_needle_short
+          fill: c.tick
         )
-        |> line({{0, 50}, {0, -length + 50}}, stroke: {18, @color_needle_short}, cap: :round)
+        |> line({{0, 50}, {0, -length + 50}}, stroke: {18, c.tick}, cap: :round)
       end,
-      rotate: rotation
+      rotate: angle
     )
   end
 
-  # Center cap covering needle pivots
-  defp draw_center_cap(graph) do
-    graph
-    |> circle(35, fill: @color_black, stroke: {5, @color_border})
-    |> circle(15, fill: @color_deep_orange)
+  defp draw_center_cap(graph, c, transparent_bg) do
+    if transparent_bg do
+      graph
+      |> circle(35, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    else
+      graph
+      |> circle(35, fill: c.bg, stroke: {5, c.border})
+      |> circle(15, fill: c.border)
+    end
   end
 end
